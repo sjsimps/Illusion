@@ -6,18 +6,23 @@
 #include <time.h>
 #include <vector>
 
+#define PI 3.14159265358979323846
+
+static const int TABLE_LEN = 2001;
+
 using namespace std;
 
 class SmallFFT
 {
 public:
-    SmallFFT();
-    ~SmallFFT();
 
     double* m_data;
     int m_sample_width;
     double m_sample_period;
     vector<double> m_frequencies;
+
+    double m_sin_table[TABLE_LEN];
+    double m_cos_table[TABLE_LEN];
 
     struct Config
     {
@@ -26,6 +31,9 @@ public:
         vector<double> sampled_frequencies; //which frequencies to track
     };
     struct Config m_cfg;
+
+    SmallFFT();
+    ~SmallFFT();
 
     void sin_cos(double a1, double* sin, double* cos);
 
@@ -38,6 +46,12 @@ public:
 SmallFFT::SmallFFT()
 {
     m_data = NULL;
+
+    for (int index = 0; index < TABLE_LEN; index++)
+    {
+        m_sin_table[index] = sin(2 * PI * ((double)index / (double)TABLE_LEN));
+        m_cos_table[index] = cos(2 * PI * ((double)index / (double)TABLE_LEN));
+    }
 }
 
 SmallFFT::~SmallFFT()
@@ -61,60 +75,57 @@ void SmallFFT::update_cfg()
     m_data = new double[m_sample_width];
 }
 
-double SmallFFT::comp_amplitude(double frequency)
+double SmallFFT::comp_amplitude(double frequency /*Hz*/)
 {
+    frequency = frequency * PI * 2;
+
     double magnitude = 0;
-    double step = 0;
-    double span = m_sample_width * m_sample_period;
     double sin, cos;
+    double step = 0;
+    double step_d = 1.0/m_sample_width * frequency;
+
     for(int x = 0; x < m_sample_width; x++)
     {
-        sin_cos(frequency * step, &sin, &cos);
-
-        magnitude += m_data[x] * ( sin + cos );
-        step += m_sample_period;
+        sin_cos(step, &sin, &cos);
+        magnitude += m_data[x] * (sin + cos);
+        step += step_d;
     }
 
-    magnitude = magnitude * 2 / span;
+    magnitude = magnitude / m_sample_width;
     return magnitude;
 }
 
-void SmallFFT::sin_cos(double a1, double* sin, double* cos)
+void SmallFFT::sin_cos(double angle, double* sin_, double* cos_)
 {
     // Fast sin + cos implementation
+    double div2pi = angle / (2*PI);
+    int index = (int)(div2pi * TABLE_LEN) % TABLE_LEN;
 
-    double a2 = a1 * a1;
-    double a4 = a2 * a2;
-    double a6 = a4 * a2;
-    //sin = a1 - a3/3! + a5/5! - a7/7! ...
-    *sin = a1 * (1 - a2/6 + a4/120);
-    //cos = 1 - a2/2! + a4/4! - a6/6! ...
-    *cos = 1 - a2/2 + a4/24 - a6/720;
+    *sin_ = m_sin_table[index];
+    *cos_ = m_cos_table[index];
 }
 
 int main(int argc, char* argv[])
 {
     SmallFFT fft;
-    clock_t begin_time, end_time;
-    double sin_, cos_;
 
+    //44.1 kHz
+    fft.m_cfg.sample_period = 1.0/44100.0;
+    fft.m_cfg.sample_width = 44100;
+    fft.update_cfg();
 
-    unsigned int n_loops = 100000000;
-
-    begin_time = clock();
-    for (unsigned int x = 0; x < n_loops; x++)
+    for (int x = 0; x < 44100; x+=1)
     {
-        fft.sin_cos(x,&sin_,&cos_);
+        fft.m_data[x] = ((x % 100) < 50) ? 1.0 : 0.0;
     }
-    end_time = clock();
-    cout << begin_time - end_time << "\n";
 
-    begin_time = clock();
-    for (unsigned int x = 0; x < n_loops; x++)
+    double ampl = 0;
+    for (int x = 0; x < 21000; x+=1)
     {
-        sin_ = sin(x);
-        cos_ = cos(x);
+        ampl = fft.comp_amplitude(x);
+        if (ampl > 0.01 || ampl < -0.01)
+        {
+            cout << "FRQ: " << x << " / AMPL: " << ampl << "\n";
+        }
     }
-    end_time = clock();
-    cout << begin_time - end_time << "\n";
 }

@@ -1,10 +1,7 @@
 
 #include <iostream>
 #include <math.h>
-#include <getopt.h>
-#include <string.h>
-#include <time.h>
-#include <vector>
+//#include "SDL/SDL.h"
 
 using namespace std;
 

@@ -8,7 +8,7 @@
 
 #define PI 3.14159265358979323846
 
-static const int TABLE_LEN = 2001;
+static const int TABLE_LEN = 4001;
 
 using namespace std;
 
@@ -19,7 +19,6 @@ public:
     double* m_data;
     int m_sample_width;
     double m_sample_period;
-    vector<double> m_frequencies;
 
     double m_sin_table[TABLE_LEN];
     double m_cos_table[TABLE_LEN];
@@ -28,9 +27,15 @@ public:
     {
         int sample_width; //number_of_samples
         double sample_period; //milliseconds
-        vector<double> sampled_frequencies; //which frequencies to track
     };
     struct Config m_cfg;
+
+    struct Complex
+    {
+        double r;
+        double i;
+    };
+    struct Complex* m_frequencies;
 
     SmallFFT();
     ~SmallFFT();
@@ -40,12 +45,15 @@ public:
     void update_cfg();
 
     double comp_amplitude(double frequency);
+    void comp_FFT(int begin, int step, int size);
+    void comp_FFT();
 
 };
 
 SmallFFT::SmallFFT()
 {
     m_data = NULL;
+    m_frequencies = NULL;
 
     for (int index = 0; index < TABLE_LEN; index++)
     {
@@ -60,11 +68,14 @@ SmallFFT::~SmallFFT()
     {
         delete m_data;
     }
+    if (m_frequencies != NULL)
+    {
+        delete m_frequencies;
+    }
 }
 
 void SmallFFT::update_cfg()
 {
-    m_frequencies = m_cfg.sampled_frequencies;
     m_sample_width = m_cfg.sample_width;
     m_sample_period = m_cfg.sample_period;
 
@@ -72,7 +83,50 @@ void SmallFFT::update_cfg()
     {
         delete m_data;
     }
+    if (m_frequencies != NULL)
+    {
+        delete m_frequencies;
+    }
     m_data = new double[m_sample_width];
+    m_frequencies = new struct Complex[m_sample_width];
+}
+
+void SmallFFT::comp_FFT()
+{
+    comp_FFT(0,1,m_sample_width-1);
+}
+
+void SmallFFT::comp_FFT(int begin, int step, int size)
+{
+    if (size <= 0)
+    {
+        return;
+    }
+    if (size == 1)
+    {
+        //cout << "B: " << begin << " // S: " << step << " // SIZE: " << size << "\n";
+        m_frequencies[begin].r = m_data[begin];// / m_sample_width;
+        m_frequencies[begin].i = m_data[begin];// / m_sample_width;
+    }
+    else
+    {
+        comp_FFT(begin, 2*step, size/2);
+        comp_FFT(begin + step, 2*step, size/2);
+        double sin_, cos_;
+        for (int k = 0; k < size/2; k++)
+        {
+            sin_cos(-2*PI*k/size, &sin_, &cos_);
+
+            float f_r = m_frequencies[k].r;
+            float f_i = m_frequencies[k].i;
+
+            m_frequencies[k].r = f_r + m_frequencies[k + size/2].r * cos_;// / m_sample_width;
+            m_frequencies[k].i = f_i - m_frequencies[k + size/2].i * sin_;// / m_sample_width;
+
+            m_frequencies[k + size/2].r = f_r - m_frequencies[k + size/2].r * cos_;// / m_sample_width;
+            m_frequencies[k + size/2].i = f_i + m_frequencies[k + size/2].i * sin_;// / m_sample_width;
+        }
+    }
 }
 
 double SmallFFT::comp_amplitude(double frequency /*Hz*/)
@@ -111,19 +165,30 @@ int main(int argc, char* argv[])
 
     //44.1 kHz
     fft.m_cfg.sample_period = 1.0/44100.0;
-    fft.m_cfg.sample_width = 44100;
+    fft.m_cfg.sample_width = 65536;
     fft.update_cfg();
 
-    for (int x = 0; x < 44100; x+=1)
+    for (int x = 0; x < 65536; x+=1)
     {
-        fft.m_data[x] = ((x % 100) < 50) ? 1.0 : 0.0;
+        fft.m_data[x] = ((x % 6000) < 500) ? 1.0 : 0.0;
     }
 
+    /*
     double ampl = 0;
     for (int x = 0; x < 21000; x+=1)
     {
         ampl = fft.comp_amplitude(x);
         if (ampl > 0.01 || ampl < -0.01)
+        {
+            cout << "FRQ: " << x << " / AMPL: " << ampl << "\n";
+        }
+    }
+    */
+    fft.comp_FFT();
+    for (int x = 0; x < 10000; x+=1)
+    {
+        float ampl = fft.m_frequencies[x].r;
+        if (ampl > 0.00001 || ampl < -0.00001)
         {
             cout << "FRQ: " << x << " / AMPL: " << ampl << "\n";
         }

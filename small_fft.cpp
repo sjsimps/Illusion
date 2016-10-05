@@ -6,60 +6,32 @@
 #include <time.h>
 #include <vector>
 
-#define PI 3.14159265358979323846
-
-static const int TABLE_LEN = 4001;
-
 using namespace std;
 
 class SmallFFT
 {
 public:
 
-    double* m_data;
+    //Each even data element corresponds to real component
+    //Each odd element corresponds to imaginary component
+    float* m_data;
+
     int m_sample_width;
     double m_sample_period;
 
-    double m_sin_table[TABLE_LEN];
-    double m_cos_table[TABLE_LEN];
-
-    struct Config
-    {
-        int sample_width; //number_of_samples
-        double sample_period; //milliseconds
-    };
-    struct Config m_cfg;
-
-    struct Complex
-    {
-        double r;
-        double i;
-    };
-    struct Complex* m_frequencies;
-
-    SmallFFT();
+    SmallFFT(int sample_width, double sample_period);
     ~SmallFFT();
-
-    void sin_cos(double a1, double* sin, double* cos);
 
     void update_cfg();
 
-    double comp_amplitude(double frequency);
-    void comp_FFT(int begin, int step, int size);
     void comp_FFT();
-
 };
 
-SmallFFT::SmallFFT()
+SmallFFT::SmallFFT(int sample_width, double sample_period)
 {
-    m_data = NULL;
-    m_frequencies = NULL;
-
-    for (int index = 0; index < TABLE_LEN; index++)
-    {
-        m_sin_table[index] = sin(2 * PI * ((double)index / (double)TABLE_LEN));
-        m_cos_table[index] = cos(2 * PI * ((double)index / (double)TABLE_LEN));
-    }
+    m_sample_width = sample_width;
+    m_sample_period = sample_period;
+    m_data = new float[m_sample_width*2];
 }
 
 SmallFFT::~SmallFFT()
@@ -68,129 +40,79 @@ SmallFFT::~SmallFFT()
     {
         delete m_data;
     }
-    if (m_frequencies != NULL)
-    {
-        delete m_frequencies;
-    }
 }
 
-void SmallFFT::update_cfg()
-{
-    m_sample_width = m_cfg.sample_width;
-    m_sample_period = m_cfg.sample_period;
-
-    if (m_data != NULL)
-    {
-        delete m_data;
-    }
-    if (m_frequencies != NULL)
-    {
-        delete m_frequencies;
-    }
-    m_data = new double[m_sample_width];
-    m_frequencies = new struct Complex[m_sample_width];
-}
-
+//Source : http://www.drdobbs.com/cpp/a-simple-and-efficient-fft-implementatio/199500857?pgno=1
 void SmallFFT::comp_FFT()
 {
-    comp_FFT(0,1,m_sample_width-1);
-}
+    unsigned long n, mmax, m, j, istep, i;
+    double wtemp, wr, wpr, wpi, wi, theta;
+    double tempr, tempi;
 
-void SmallFFT::comp_FFT(int begin, int step, int size)
-{
-    if (size <= 0)
-    {
-        return;
-    }
-    if (size == 1)
-    {
-        //cout << "B: " << begin << " // S: " << step << " // SIZE: " << size << "\n";
-        m_frequencies[begin].r = m_data[begin];// / m_sample_width;
-        m_frequencies[begin].i = m_data[begin];// / m_sample_width;
-    }
-    else
-    {
-        comp_FFT(begin, 2*step, size/2);
-        comp_FFT(begin + step, 2*step, size/2);
-        double sin_, cos_;
-        for (int k = 0; k < size/2; k++)
-        {
-            sin_cos(-2*PI*k/size, &sin_, &cos_);
-
-            float f_r = m_frequencies[k].r;
-            float f_i = m_frequencies[k].i;
-
-            m_frequencies[k].r = f_r + m_frequencies[k + size/2].r * cos_;// / m_sample_width;
-            m_frequencies[k].i = f_i - m_frequencies[k + size/2].i * sin_;// / m_sample_width;
-
-            m_frequencies[k + size/2].r = f_r - m_frequencies[k + size/2].r * cos_;// / m_sample_width;
-            m_frequencies[k + size/2].i = f_i + m_frequencies[k + size/2].i * sin_;// / m_sample_width;
+    // reverse-binary reindexing
+    n = m_sample_width<<1;
+    j=1;
+    for (i=1; i<n; i+=2) {
+        if (j>i) {
+            swap(m_data[j-1], m_data[i-1]);
+            swap(m_data[j], m_data[i]);
         }
+        m = m_sample_width;
+        while (m>=2 && j>m) {
+            j -= m;
+            m >>= 1;
+        }
+        j += m;
+    };
+
+    // here begins the Danielson-Lanczos section
+    mmax=2;
+    while (n>mmax) {
+        istep = mmax<<1;
+        theta = -(2*M_PI/mmax);
+        wtemp = sin(0.5*theta);
+        wpr = -2.0*wtemp*wtemp;
+        wpi = sin(theta);
+        wr = 1.0;
+        wi = 0.0;
+        for (m=1; m < mmax; m += 2) {
+            for (i=m; i <= n; i += istep) {
+                j=i+mmax;
+                tempr = wr*m_data[j-1] - wi*m_data[j];
+                tempi = wr * m_data[j] + wi*m_data[j-1];
+
+                m_data[j-1] = m_data[i-1] - tempr;
+                m_data[j] = m_data[i] - tempi;
+                m_data[i-1] += tempr;
+                m_data[i] += tempi;
+            }
+            wtemp=wr;
+            wr += wr*wpr - wi*wpi;
+            wi += wi*wpr + wtemp*wpi;
+        }
+        mmax=istep;
     }
-}
-
-double SmallFFT::comp_amplitude(double frequency /*Hz*/)
-{
-    frequency = frequency * PI * 2;
-
-    double magnitude = 0;
-    double sin, cos;
-    double step = 0;
-    double step_d = 1.0/m_sample_width * frequency;
-
-    for(int x = 0; x < m_sample_width; x++)
-    {
-        sin_cos(step, &sin, &cos);
-        magnitude += m_data[x] * (sin + cos);
-        step += step_d;
-    }
-
-    magnitude = magnitude / m_sample_width;
-    return magnitude;
-}
-
-void SmallFFT::sin_cos(double angle, double* sin_, double* cos_)
-{
-    // Fast sin + cos implementation
-    double div2pi = angle / (2*PI);
-    int index = (int)(div2pi * TABLE_LEN) % TABLE_LEN;
-
-    *sin_ = m_sin_table[index];
-    *cos_ = m_cos_table[index];
 }
 
 int main(int argc, char* argv[])
 {
-    SmallFFT fft;
+    SmallFFT fft(65536, 1.0/65536.0);
 
-    //44.1 kHz
-    fft.m_cfg.sample_period = 1.0/44100.0;
-    fft.m_cfg.sample_width = 65536;
-    fft.update_cfg();
-
-    for (int x = 0; x < 65536; x+=1)
+    for (int x = 0; x < 65536*2; x+=2)
     {
-        fft.m_data[x] = ((x % 6000) < 500) ? 1.0 : 0.0;
+        //Signal:
+        fft.m_data[x] = cos(2.0*M_PI*(double)x*(100.0/65536.0));
+        //fft.m_data[x] = ((x % (6000) ) < (3000) ) ? 1.0 : 0.0;
     }
 
-    /*
-    double ampl = 0;
-    for (int x = 0; x < 21000; x+=1)
-    {
-        ampl = fft.comp_amplitude(x);
-        if (ampl > 0.01 || ampl < -0.01)
-        {
-            cout << "FRQ: " << x << " / AMPL: " << ampl << "\n";
-        }
-    }
-    */
     fft.comp_FFT();
-    for (int x = 0; x < 10000; x+=1)
+    for (int x = 0; x < 65536/3; x+=2)
     {
-        float ampl = fft.m_frequencies[x].r;
-        if (ampl > 0.00001 || ampl < -0.00001)
+        double ampl = fft.m_data[x];
+        double threshold = 100;
+        if (ampl > threshold || ampl < -threshold)
         {
-            cout << "FRQ: " << x << " / AMPL: " << ampl << "\n";
+            cout << "FRQ: " << (double)x/4 << " / AMPL: " << ampl << "\n";
         }
     }
 }

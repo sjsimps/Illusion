@@ -1,7 +1,8 @@
 CPP_FLAGS = -O2 -Wall -std=c++11
 DEBUG_FLAGS += -g -Wall -std=c++11
 PROG = small_fft
-SRC = visualizer.cpp #small_fft.cpp
+#SRC = visualizer.cpp #small_fft.cpp
+SRC = small_fft.cpp
 SDL =-L/usr/local/lib -lSDL2 -lSDL2_image
 
 .PHONY: all

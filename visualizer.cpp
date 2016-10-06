@@ -6,6 +6,24 @@
 #define HEIGHT 600
 #define IMG_PATH "out.bmp"
 
+/*
+class Visualizer
+{
+public:
+    Visualizer();
+    ~Visualizer();
+
+    initialize(int width, int height);
+    set_texture(char* img_path);
+    run();
+
+    SDL_Window *m_win = NULL;
+    SDL_Renderer *m_renderer = NULL;
+    SDL_Texture *m_img = NULL;
+    int m_height, m_width;
+};
+*/
+
 int main (int argc, char *argv[]) {
 
     // variable declarations

@@ -33,21 +33,35 @@ Visualizer::~Visualizer()
 
 void Visualizer::initialize(int width, int height)
 {
-    // create the window and renderer
-    // note that the renderer is accelerated
-    m_win = SDL_CreateWindow("Image Loading", 100, 100, width, height, 0);
-    m_renderer = SDL_CreateRenderer(m_win, -1, SDL_RENDERER_ACCELERATED);
-
-    // load our image
-    //m_img = IMG_LoadTexture(m_renderer, IMG_PATH);
-    //SDL_QueryTexture(m_img, NULL, NULL, &m_width, &m_height); // get the width and height of the texture
-    m_img = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height );
     // put the location where we want the texture to be drawn into a rectangle
     // I'm also scaling the texture 2x simply by setting the width and height
     m_texr.x = 0;
     m_texr.y = 0;
     m_texr.w = width;
     m_texr.h = height;
+
+    // create the window and renderer
+    // note that the renderer is accelerated
+    m_win = SDL_CreateWindow("Image Loading", 100, 100, width, height, 0);
+    m_renderer = SDL_CreateRenderer(m_win, -1, SDL_RENDERER_ACCELERATED);
+
+    // load our image
+    SDL_Surface* img_tmp = IMG_Load(IMG_PATH);
+    img_tmp = SDL_ConvertSurfaceFormat(img_tmp, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING);
+
+    SDL_Surface* s = SDL_CreateRGBSurface(0x00, width, height,
+                                          32 /*bits*/, 0xff /*r*/, 0xff00 /*g*/, 0xff0000 /*b*/, 0xff000000 /*a*/);
+
+    SDL_BlitSurface(img_tmp, &m_texr, s, NULL);
+
+    //m_img = SDL_CreateTextureFromSurface(m_renderer,s);
+
+    m_img = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height );
+
+    set_pixels((uint32_t*)s->pixels, width, height);
+
+    SDL_QueryTexture(m_img, NULL, NULL, &m_width, &m_height); // get the width and height of the texture
+    SDL_FreeSurface(img_tmp);
 }
 
 bool Visualizer::render()
@@ -122,7 +136,7 @@ int main (int argc, char *argv[])
     int count = 0;
     while (visualizer.render())
     {
-        for (int x = 0; x < WIDTH * HEIGHT; x++)
+        for (int x = 0; x <  WIDTH * HEIGHT; x++)
         {
             pixels[count] += (x%7) - (x%3) + x;
             count = (count + 1) % (WIDTH * HEIGHT);

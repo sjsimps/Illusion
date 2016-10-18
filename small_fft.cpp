@@ -73,6 +73,25 @@ void SmallFFT::comp_FFT()
     }
 }
 
+std::vector<struct FreqContent> get_significant_frq(double threshold)
+{
+    std::vector<struct FreqContent> retval;
+    comp_FFT();
+    for (int x = 0; x < sample_width/3; x+=2)
+    {
+        double ampl = fft.m_data[x];
+        if (ampl > threshold || ampl < -threshold)
+        {
+            cout << "FRQ: " << (double)x/4 << " / AMPL: " << ampl << "\n";
+
+            struct FreqContent content;
+            content.frq = (double)x/4;
+            content.pwr = ampl;
+            retval.append(content);
+        }
+    }
+}
+
 int main(int argc, char* argv[])
 {
     SmallFFT fft(65536, 1.0/65536.0);
@@ -84,14 +103,5 @@ int main(int argc, char* argv[])
         //fft.m_data[x] = ((x % (6000) ) < (3000) ) ? 1.0 : 0.0;
     }
 
-    fft.comp_FFT();
-    for (int x = 0; x < 65536/3; x+=2)
-    {
-        double ampl = fft.m_data[x];
-        double threshold = 100;
-        if (ampl > threshold || ampl < -threshold)
-        {
-            cout << "FRQ: " << (double)x/4 << " / AMPL: " << ampl << "\n";
-        }
-    }
+    fft.get_significant_frq(100.0);
 }

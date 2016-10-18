@@ -6,7 +6,7 @@
 #include "visualizer.h"
 
 #define WIDTH 800
-#define HEIGHT 600
+#define HEIGHT 650
 #define IMG_PATH "out.bmp"
 
 Visualizer::Visualizer()
@@ -47,16 +47,17 @@ void Visualizer::initialize(int width, int height)
 
     // load our image
     SDL_Surface* img_tmp = IMG_Load(IMG_PATH);
-    img_tmp = SDL_ConvertSurfaceFormat(img_tmp, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING);
+    //img_tmp = SDL_ConvertSurfaceFormat(img_tmp, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING);
 
     SDL_Surface* s = SDL_CreateRGBSurface(0x00, width, height,
-                                          32 /*bits*/, 0xff /*r*/, 0xff00 /*g*/, 0xff0000 /*b*/, 0xff000000 /*a*/);
+                                          32 /*bits*/, 0xff /*r*/, 0xff00/*g*/, 0xff0000 /*b*/, 0xff000000);
+                                          //32 /*bits*/, 0xff /*r*/, 0xff00/*g*/, 0xff0000 /*b*/, 0xff000000);
 
     SDL_BlitSurface(img_tmp, &m_texr, s, NULL);
 
     //m_img = SDL_CreateTextureFromSurface(m_renderer,s);
 
-    m_img = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height );
+    m_img = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, width, height );
 
     set_pixels((uint32_t*)s->pixels, width, height);
 

@@ -17,3 +17,8 @@ public:
     void comp_FFT();
 };
 
+struct FreqContent
+{
+    int frq;
+    double pwr;
+}

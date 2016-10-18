@@ -22,7 +22,7 @@ Visualizer::Visualizer()
     m_renderer = NULL;
     m_img = NULL;
 }
- 
+
 Visualizer::~Visualizer()
 {
     SDL_DestroyTexture(m_img);
@@ -30,22 +30,24 @@ Visualizer::~Visualizer()
     SDL_DestroyWindow(m_win);
 }
 
+
 void Visualizer::initialize(int width, int height)
 {
     // create the window and renderer
     // note that the renderer is accelerated
-    m_win = SDL_CreateWindow("Image Loading", 100, 100, WIDTH, HEIGHT, 0);
+    m_win = SDL_CreateWindow("Image Loading", 100, 100, width, height, 0);
     m_renderer = SDL_CreateRenderer(m_win, -1, SDL_RENDERER_ACCELERATED);
-    
+
     // load our image
-    m_img = IMG_LoadTexture(m_renderer, IMG_PATH);
-    SDL_QueryTexture(m_img, NULL, NULL, &m_width, &m_height); // get the width and height of the texture
+    //m_img = IMG_LoadTexture(m_renderer, IMG_PATH);
+    //SDL_QueryTexture(m_img, NULL, NULL, &m_width, &m_height); // get the width and height of the texture
+    m_img = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height );
     // put the location where we want the texture to be drawn into a rectangle
     // I'm also scaling the texture 2x simply by setting the width and height
-    m_texr.x = width/2;
-    m_texr.y = height/2;
-    m_texr.w = m_width*2;
-    m_texr.h = m_height*2; 
+    m_texr.x = 0;
+    m_texr.y = 0;
+    m_texr.w = width;
+    m_texr.h = height;
 }
 
 bool Visualizer::render()
@@ -59,7 +61,7 @@ bool Visualizer::render()
         {
             return false;
         }
-    } 
+    }
     // clear the screen
     SDL_RenderClear(m_renderer);
     // copy the texture to the rendering context
@@ -71,11 +73,62 @@ bool Visualizer::render()
     return true;
 }
 
+void Visualizer::get_pixels(uint32_t* pixel_buffer, int width, int height)
+{
+    uint32_t* pixels = NULL;
+    int pitch = 0;
+
+    // Now let's make our "pixels" pointer point to the texture data.
+    if (SDL_LockTexture(m_img, NULL, (void**)&pixels, &pitch))
+    {
+        std::cout << "Get Pixels : SDL Lock Failed : " << SDL_GetError() << "\n";
+    }
+    else
+    {
+        size_t buffer_size = width*height;
+        memcpy(pixel_buffer, pixels, buffer_size * 4);
+    }
+    SDL_UnlockTexture(m_img);
+}
+
+void Visualizer::set_pixels(uint32_t* pixel_buffer, int width, int height)
+{
+    uint32_t* pixels = NULL;
+    int pitch = 0;
+
+    // Now let's make our "pixels" pointer point to the texture data.
+    if (SDL_LockTexture(m_img, NULL, (void**)&pixels, &pitch))
+    {
+        //LOCK FAILURE
+        std::cout << "Set Pixels : SDL Lock Failed : " << SDL_GetError() << "\n";
+    }
+    else
+    {
+        size_t buffer_size = width*height;
+        memcpy(pixels, pixel_buffer, buffer_size * 4);
+    }
+    SDL_UnlockTexture(m_img);
+}
+
+
 int main (int argc, char *argv[])
 {
     Visualizer visualizer;
     visualizer.initialize(WIDTH, HEIGHT);
 
-    while (visualizer.render()){}
+    uint32_t* pixels = new uint32_t[WIDTH*HEIGHT];
+    visualizer.get_pixels(pixels, WIDTH, HEIGHT);
+
+    int count = 0;
+    while (visualizer.render())
+    {
+        for (int x = 0; x < WIDTH * HEIGHT; x++)
+        {
+            pixels[count] += (x%7) - (x%3) + x;
+            count = (count + 1) % (WIDTH * HEIGHT);
+        }
+        std::cout << count << "\n";
+        visualizer.set_pixels(pixels, WIDTH, HEIGHT);
+    }
     return 0;
 }

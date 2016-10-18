@@ -7,6 +7,8 @@ public:
     void initialize(int width, int height);
     void set_texture(char* img_path);
     bool render();
+    void get_pixels(uint32_t* pixel_buffer, int width, int height);
+    void set_pixels(uint32_t* pixel_buffer, int width, int height);
 
     SDL_Window* m_win;
     SDL_Renderer* m_renderer;

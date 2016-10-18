@@ -7,7 +7,8 @@
 
 #define WIDTH 800
 #define HEIGHT 650
-#define IMG_PATH "out.bmp"
+//#define IMG_PATH "out.bmp"
+#define IMG_PATH "test1.bmp"
 
 Visualizer::Visualizer()
 {
@@ -51,7 +52,6 @@ void Visualizer::initialize(int width, int height)
 
     SDL_Surface* s = SDL_CreateRGBSurface(0x00, width, height,
                                           32 /*bits*/, 0xff /*r*/, 0xff00/*g*/, 0xff0000 /*b*/, 0xff000000);
-                                          //32 /*bits*/, 0xff /*r*/, 0xff00/*g*/, 0xff0000 /*b*/, 0xff000000);
 
     SDL_BlitSurface(img_tmp, &m_texr, s, NULL);
 

@@ -142,7 +142,6 @@ int main (int argc, char *argv[])
             pixels[count] += (x%7) - (x%3) + x;
             count = (count + 1) % (WIDTH * HEIGHT);
         }
-        std::cout << count << "\n";
         visualizer.set_pixels(pixels, WIDTH, HEIGHT);
     }
     return 0;

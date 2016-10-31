@@ -24,10 +24,9 @@ static ssize_t loop_write(int fd, const void*data, size_t size) {
     for (int x = 0; x < size; x++)
     {
         {
-            std::cout << ((uint8_t*)data)[x] << " , ";
+            std::cout << (int)((int8_t*)data)[x] << "\n";
         }
     }
-    std::cout << "\n";
     return 1;
 }
 int main(int argc, char*argv[]) {

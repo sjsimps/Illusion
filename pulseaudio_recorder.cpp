@@ -18,44 +18,70 @@
 #include <errno.h>
 #include <pulse/simple.h>
 #include <pulse/error.h>
-#define BUFSIZE 1024
-/* A simple routine calling UNIX write() in a loop */
-static ssize_t loop_write(int fd, const void*data, size_t size) {
-    for (int x = 0; x < size; x++)
-    {
-        {
-            std::cout << (int)((int8_t*)data)[x] << "\n";
-        }
-    }
-    return 1;
-}
-int main(int argc, char*argv[]) {
+
+#include "pulseaudio_recorder.h"
+
+PulseAudioRecorder::PulseAudioRecorder(int buf_size)
+{
     /* The sample type to use */
-    static const pa_sample_spec ss = {
+    m_spec = {
         .format = PA_SAMPLE_S16LE,
         .rate = 44100,
         .channels = 1
     };
-    pa_simple *s = NULL;
-    int ret = 1;
+    m_simple = NULL;
+    m_buf_size = buf_size;
+
     int error;
     /* Create the recording stream */
-    if (!(s = pa_simple_new(NULL, argv[0], PA_STREAM_RECORD, NULL, "record", &ss, NULL, NULL, &error))) {
+    if (!(m_simple = pa_simple_new(NULL, NULL, PA_STREAM_RECORD, NULL, "record", &m_spec, NULL, NULL, &error)))
+    {
         fprintf(stderr, __FILE__": pa_simple_new() failed: %s\n", pa_strerror(error));
-        goto finish;
     }
-    for (;;) {
-        uint8_t buf[BUFSIZE];
-        /* Record some data ... */
-        if (pa_simple_read(s, buf, sizeof(buf), &error) < 0) {
-            fprintf(stderr, __FILE__": pa_simple_read() failed: %s\n", pa_strerror(error));
-            goto finish;
-        }
-        loop_write(STDOUT_FILENO, buf, sizeof(buf));
+    m_buf = new int16_t[m_buf_size];
+    for (int x = 0; x < m_buf_size; x++)
+    {
+        m_buf[x] = 0;
     }
-    ret = 0;
-finish:
-    if (s)
-        pa_simple_free(s);
-    return ret;
+}
+
+PulseAudioRecorder::~PulseAudioRecorder()
+{
+    if (m_simple)
+    {
+        pa_simple_free(m_simple);
+    }
+    if (m_buf)
+    {
+        delete m_buf;
+    }
+}
+
+void PulseAudioRecorder::print_buf()
+{
+    for (int x = 0; x < m_buf_size; x++)
+    {
+        if (m_buf[x] == 0) return;
+        std::cout << m_buf[x] << "\n" ;
+    }
+}
+
+int PulseAudioRecorder::read_to_buf()
+{
+    int error;
+    /* Record some data ... */
+    if (pa_simple_read(m_simple, m_buf, sizeof(m_buf), &error) < 0)
+    {
+        fprintf(stderr, __FILE__": pa_simple_read() failed: %s\n", pa_strerror(error));
+    }
+    return error;
+}
+
+int main(int argc, char*argv[])
+{
+    PulseAudioRecorder recorder(128);
+    while (recorder.read_to_buf() >= 0)
+    {
+        recorder.print_buf();
+    }
 }

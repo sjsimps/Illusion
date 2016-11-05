@@ -59,9 +59,13 @@ PulseAudioRecorder::~PulseAudioRecorder()
 
 void PulseAudioRecorder::print_buf()
 {
-    for (int x = 0; x < m_buf_size; x++)
+    int x;
+    for (x = 0; x < m_buf_size; x++)
     {
-        if (m_buf[x] == 0) return;
+        // It seems the buffer will not fill if the consumption if
+        // faster than production of sound date. Therefore EOT is when
+        // the first zero is encountered.
+        //if (m_buf[x] == 0) break;//return;
         std::cout << m_buf[x] << "\n" ;
     }
 }
@@ -70,7 +74,7 @@ int PulseAudioRecorder::read_to_buf()
 {
     int error;
     /* Record some data ... */
-    if (pa_simple_read(m_simple, m_buf, sizeof(m_buf), &error) < 0)
+    if (pa_simple_read(m_simple, m_buf, m_buf_size*sizeof(int16_t), &error) < 0)
     {
         fprintf(stderr, __FILE__": pa_simple_read() failed: %s\n", pa_strerror(error));
     }
@@ -79,7 +83,7 @@ int PulseAudioRecorder::read_to_buf()
 
 int main(int argc, char*argv[])
 {
-    PulseAudioRecorder recorder(128);
+    PulseAudioRecorder recorder(1024);
     while (recorder.read_to_buf() >= 0)
     {
         recorder.print_buf();

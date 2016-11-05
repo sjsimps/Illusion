@@ -1,7 +1,9 @@
 
 #include <iostream>
 #include <math.h>
+#include <cmath>
 #include <cstring>
+#include <algorithm>
 
 #include "small_fft.h"
 
@@ -74,6 +76,11 @@ void SmallFFT::comp_FFT()
     }
 }
 
+bool compareByAmpl(const struct FreqContent a, const struct FreqContent b)
+{
+    return std::abs(a.pwr) < std::abs(b.pwr);
+}
+
 std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold)
 {
     std::vector<struct FreqContent> retval;
@@ -83,7 +90,6 @@ std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold)
         double ampl = m_data[x];
         if (ampl > threshold || ampl < -threshold)
         {
-            cout << "FRQ: " << (double)x/3 << " / AMPL: " << ampl << "\n";
 
             struct FreqContent content;
             content.frq = (double)x/3;
@@ -91,6 +97,7 @@ std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold)
             retval.push_back(content);
         }
     }
+    std::sort(retval.begin(), retval.end(), compareByAmpl);
     return retval;
 }
 

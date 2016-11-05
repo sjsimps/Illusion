@@ -105,7 +105,13 @@ int main(int argc, char*argv[])
             }
             index += REC_BUF_SIZE;
         }
-        fft.get_significant_frq(400.0);
+        std::vector<struct FreqContent> content;
+        content = fft.get_significant_frq(400.0);
+        for (unsigned int x = 0; x < content.size(); x++)
+        {
+            std::cout << "FRQ : " << content[x].frq <<
+                      " // AMPL: " << content[x].pwr << "\n";
+        }
         fft.reset();
         std::cout << " ------------- \n";
     }

@@ -1,3 +1,12 @@
+
+#include <vector>
+
+struct FreqContent
+{
+    int frq;
+    double pwr;
+};
+
 class SmallFFT
 {
 public:
@@ -15,10 +24,9 @@ public:
     void update_cfg();
 
     void comp_FFT();
+
+    void reset();
+
+    std::vector<struct FreqContent> get_significant_frq(double threshold);
 };
 
-struct FreqContent
-{
-    int frq;
-    double pwr;
-}

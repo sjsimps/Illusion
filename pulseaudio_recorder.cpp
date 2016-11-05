@@ -20,6 +20,7 @@
 #include <pulse/error.h>
 
 #include "pulseaudio_recorder.h"
+#include "small_fft.h"
 
 PulseAudioRecorder::PulseAudioRecorder(int buf_size)
 {
@@ -83,9 +84,30 @@ int PulseAudioRecorder::read_to_buf()
 
 int main(int argc, char*argv[])
 {
-    PulseAudioRecorder recorder(1024);
-    while (recorder.read_to_buf() >= 0)
+    const int REC_BUF_SIZE = 1024;
+    const int FFT_BUF_SIZE = 65536;
+
+    PulseAudioRecorder recorder(REC_BUF_SIZE);
+    SmallFFT fft(FFT_BUF_SIZE, 1.0/FFT_BUF_SIZE);
+
+    while (1)
     {
-        recorder.print_buf();
+        int index = 0;
+        while (recorder.read_to_buf() >= 0
+               && (index+REC_BUF_SIZE) < FFT_BUF_SIZE)
+        {
+            //recorder.print_buf();
+            int buf_idx = 0;
+            for (int x = index; x < (index + REC_BUF_SIZE); x++)
+            {
+                fft.m_data[x<<1] = (float)(recorder.m_buf[buf_idx])/1024.0;
+                buf_idx++;
+            }
+            index += REC_BUF_SIZE;
+        }
+        fft.get_significant_frq(400.0);
+        fft.reset();
+        std::cout << " ------------- \n";
     }
+
 }

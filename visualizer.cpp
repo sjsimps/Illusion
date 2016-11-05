@@ -32,7 +32,7 @@ Visualizer::~Visualizer()
 }
 
 
-void Visualizer::initialize(int width, int height)
+void Visualizer::initialize(int width, int height, char* image_path)
 {
     // put the location where we want the texture to be drawn into a rectangle
     // I'm also scaling the texture 2x simply by setting the width and height
@@ -47,7 +47,7 @@ void Visualizer::initialize(int width, int height)
     m_renderer = SDL_CreateRenderer(m_win, -1, SDL_RENDERER_ACCELERATED);
 
     // load our image
-    SDL_Surface* img_tmp = IMG_Load(IMG_PATH);
+    SDL_Surface* img_tmp = IMG_Load(image_path);
     //img_tmp = SDL_ConvertSurfaceFormat(img_tmp, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING);
 
     SDL_Surface* s = SDL_CreateRGBSurface(0x00, width, height,
@@ -129,7 +129,7 @@ void Visualizer::set_pixels(uint32_t* pixel_buffer, int width, int height)
 int main (int argc, char *argv[])
 {
     Visualizer visualizer;
-    visualizer.initialize(WIDTH, HEIGHT);
+    visualizer.initialize(WIDTH, HEIGHT, IMG_PATH);
 
     uint32_t* pixels = new uint32_t[WIDTH*HEIGHT];
     visualizer.get_pixels(pixels, WIDTH, HEIGHT);

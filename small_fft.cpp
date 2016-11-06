@@ -78,7 +78,7 @@ void SmallFFT::comp_FFT()
 
 bool compareByAmpl(const struct FreqContent a, const struct FreqContent b)
 {
-    return std::abs(a.pwr) < std::abs(b.pwr);
+    return std::abs(a.pwr) > std::abs(b.pwr);
 }
 
 std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold)

@@ -125,7 +125,7 @@ void Visualizer::set_pixels(uint32_t* pixel_buffer, int width, int height)
     SDL_UnlockTexture(m_img);
 }
 
-
+/*
 int main (int argc, char *argv[])
 {
     Visualizer visualizer;
@@ -146,3 +146,4 @@ int main (int argc, char *argv[])
     }
     return 0;
 }
+*/

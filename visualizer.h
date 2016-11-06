@@ -1,10 +1,13 @@
+
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 class Visualizer
 {
 public:
     Visualizer();
     ~Visualizer();
 
-    void initialize(int width, int height);
+    void initialize(int width, int height, char* img_path);
     void set_texture(char* img_path);
     bool render();
     void get_pixels(uint32_t* pixel_buffer, int width, int height);

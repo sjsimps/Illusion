@@ -27,6 +27,6 @@ public:
 
     void reset();
 
-    std::vector<struct FreqContent> get_significant_frq(double threshold);
+    std::vector<struct FreqContent> get_significant_frq(double threshold, int lower_frq_bound);
 };
 

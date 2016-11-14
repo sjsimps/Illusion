@@ -15,7 +15,7 @@ void* run_visualizer(void* thread_id)
 {
     const int WIDTH = 800;
     const int HEIGHT = 600;
-    const int N_FRQS = 1;
+    const int N_FRQS = 3;
     char* IMG_PATH = "test1.bmp";
 
     Visualizer visualizer;
@@ -29,17 +29,18 @@ void* run_visualizer(void* thread_id)
 
     while(1)
     {
-        if (content.size() > N_FRQS)
+        int content_size = content.size();
+        if (content_size > 0)
         {
             float frqs[N_FRQS];
             float amps[N_FRQS];
-            for (int z = 0; z < N_FRQS; z++)
+            for (int z = 0; (z < N_FRQS  && z < content_size); z++)
             {
                 frqs[z] = content[z].frq;
                 amps[z] = content[z].pwr;
             }
 
-            for (int content_idx = 0; content_idx < N_FRQS; content_idx++)
+            for (int content_idx = 0; (content_idx < N_FRQS  && content_idx < content_size); content_idx++)
             {
                 // TODO :: NEEDS MUTEX
                 //std::cout << "FRQ :: " << frq_cmp << "\n";
@@ -72,7 +73,7 @@ void* run_visualizer(void* thread_id)
 int main(int argc, char*argv[])
 {
     const int REC_BUF_SIZE = 4096<<2;
-    const int FFT_BUF_SIZE = 65536;
+    const int FFT_BUF_SIZE = 32768 >> 1;
     PulseAudioRecorder recorder(REC_BUF_SIZE);
     SmallFFT fft(FFT_BUF_SIZE, 1.0/FFT_BUF_SIZE);
 
@@ -92,14 +93,14 @@ int main(int argc, char*argv[])
             memcpy(data, &data[REC_BUF_SIZE*2], (FFT_BUF_SIZE - REC_BUF_SIZE)*2*sizeof(float));
             for (int x = (FFT_BUF_SIZE - REC_BUF_SIZE)*2; x < FFT_BUF_SIZE*2; x+=2)
             {
-                data[x] = (float)(recorder.m_buf[buf_idx])/1024.0;
+                data[x] = (float)(recorder.m_buf[buf_idx] >> 10); // /1024
                 buf_idx++;
             }
 
             // EXECUTING FFT
             clock_t t = clock();
             memcpy(fft.m_data, data, FFT_BUF_SIZE*2*sizeof(float));
-            content = fft.get_significant_frq(500.0);
+            content = fft.get_significant_frq(500.0, 300);
             t = clock() - t;
             std::cout << "EXEC_TIME : " << ((float)t)/CLOCKS_PER_SEC << "\n";
             for (unsigned int x = 0; x < content.size(); x++)

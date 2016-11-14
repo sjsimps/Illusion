@@ -81,11 +81,11 @@ bool compareByAmpl(const struct FreqContent a, const struct FreqContent b)
     return std::abs(a.pwr) > std::abs(b.pwr);
 }
 
-std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold)
+std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold, int lower_frq_bound)
 {
     std::vector<struct FreqContent> retval;
     comp_FFT();
-    for (int x = 0; x < m_sample_width/3; x+=2)
+    for (int x = lower_frq_bound; x < m_sample_width/3; x+=2)
     {
         double ampl = m_data[x];
         if (ampl > threshold || ampl < -threshold)

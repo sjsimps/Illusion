@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
 
 #include "small_fft.h"
 #include "pulseaudio_recorder.h"
@@ -70,8 +71,15 @@ void* run_visualizer(void* thread_id)
     return NULL;
 }
 
+void sigint_handle(int p)
+{
+    exit(1);
+}
+
 int main(int argc, char*argv[])
 {
+    signal(SIGINT, sigint_handle);
+
     const int REC_BUF_SIZE = 4096<<2;
     const int FFT_BUF_SIZE = 32768 >> 1;
     PulseAudioRecorder recorder(REC_BUF_SIZE);

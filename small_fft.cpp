@@ -85,14 +85,15 @@ std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold, 
 {
     std::vector<struct FreqContent> retval;
     comp_FFT();
-    for (int x = lower_frq_bound; x < m_sample_width/3; x+=2)
+    const double frq_const = 1.0 / (m_sample_width * m_sample_period);
+    for (int x = lower_frq_bound; x < m_sample_width/2; x+=2)
     {
         double ampl = m_data[x];
         if (ampl > threshold || ampl < -threshold)
         {
 
             struct FreqContent content;
-            content.frq = (double)x/3;
+            content.frq = (double)(x>>1)*frq_const;
             content.pwr = ampl;
             retval.push_back(content);
         }

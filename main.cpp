@@ -82,8 +82,9 @@ int main(int argc, char*argv[])
 
     const int REC_BUF_SIZE = 4096<<2;
     const int FFT_BUF_SIZE = 32768 >> 1;
+    const int SAMPLE_RATE = 44100; //Samples per sec
     PulseAudioRecorder recorder(REC_BUF_SIZE);
-    SmallFFT fft(FFT_BUF_SIZE, 1.0/FFT_BUF_SIZE);
+    SmallFFT fft(FFT_BUF_SIZE, 1.0/SAMPLE_RATE);
 
     pthread_t vis_thread;
     pthread_create(&vis_thread, NULL, run_visualizer, (void *)1);
@@ -101,7 +102,7 @@ int main(int argc, char*argv[])
             memcpy(data, &data[REC_BUF_SIZE*2], (FFT_BUF_SIZE - REC_BUF_SIZE)*2*sizeof(float));
             for (int x = (FFT_BUF_SIZE - REC_BUF_SIZE)*2; x < FFT_BUF_SIZE*2; x+=2)
             {
-                data[x] = (float)(recorder.m_buf[buf_idx] >> 10); // /1024
+                data[x] = (float)(recorder.m_buf[buf_idx]) / 1024; //>> 10); // /1024
                 buf_idx++;
             }
 

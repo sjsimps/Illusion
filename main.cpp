@@ -90,8 +90,8 @@ int main(int argc, char*argv[])
 {
     signal(SIGINT, sigint_handle);
 
-    const int REC_BUF_SIZE = 4096<<2;
-    const int FFT_BUF_SIZE = 32768 >> 1;
+    const int REC_BUF_SIZE = 4096<<1;
+    const int FFT_BUF_SIZE = 32768 >> 2;
     const int SAMPLE_RATE = 44100; //Samples per sec
     PulseAudioRecorder recorder(REC_BUF_SIZE);
     SmallFFT fft(FFT_BUF_SIZE, 1.0/SAMPLE_RATE);
@@ -118,19 +118,19 @@ int main(int argc, char*argv[])
                 beat_det.m_data[x>>1] = datapoint;
                 buf_idx++;
             }
-            std::cout << "HAS BEAT : " << beat_det.contains_beat() << " " << beat_det.m_threshold << "\n";
+            //std::cout << "HAS BEAT : " << beat_det.contains_beat() << " " << beat_det.m_threshold << "\n";
 
             // EXECUTING FFT
             clock_t t = clock();
             memcpy(fft.m_data, data, FFT_BUF_SIZE*2*sizeof(float));
-            content = fft.get_significant_frq(FRQ_THRESHOLD, 300);
+            content = fft.get_significant_frq(500.0, FRQ_THRESHOLD);
             t = clock() - t;
             std::cout << "EXEC_TIME : " << ((float)t)/CLOCKS_PER_SEC << "\n";
-            /*for (unsigned int x = 0; x < content.size(); x++)
+            for (unsigned int x = 0; x < content.size(); x++)
             {
                 std::cout << "FRQ : " << content[x].frq <<
                           " // AMPL: " << content[x].pwr << "\n";
-            }*/
+            }
             fft.reset();
             std::cout << " ------------- \n";
 

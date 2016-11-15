@@ -44,6 +44,7 @@ void Visualizer::initialize(int width, int height, char* image_path)
     // create the window and renderer
     // note that the renderer is accelerated
     m_win = SDL_CreateWindow("Image Loading", 100, 100, width, height, 0);
+    SDL_SetWindowFullscreen(m_win, SDL_WINDOW_FULLSCREEN);//_DESKTOP);
     m_renderer = SDL_CreateRenderer(m_win, -1, SDL_RENDERER_ACCELERATED);
 
     // load our image

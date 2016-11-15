@@ -9,15 +9,40 @@
 #include "small_fft.h"
 #include "pulseaudio_recorder.h"
 #include "visualizer.h"
+#include "beat_detector.h"
 
 std::vector<struct FreqContent> content;
+const int WIDTH = 800;
+const int HEIGHT = 600;
+const int N_FRQS = 3;
+const float FRQ_THRESHOLD = 150.0;
+char* IMG_PATH = "test1.bmp";
+
+void transform_pixmap(uint32_t* pixels, float frq, float amp,
+                      int content_idx, int n_frqs)
+{
+    // TODO :: NEEDS MUTEX
+    //std::cout << "FRQ :: " << frq_cmp << "\n";
+    int frq_idx_n = 0;
+    for (int frq_idx = 3*FRQ_THRESHOLD; frq_idx < 5000; frq_idx *= 3)
+    {
+        if (frq < frq_idx)
+        {
+            for (int x = content_idx; x < WIDTH * HEIGHT; x+=n_frqs)
+            {
+                pixels[x] += ((int)(amp/400) << (frq_idx_n*8)) & (0xFF << (frq_idx_n*8));
+            }
+            frq_idx = 15000;
+        }
+        else
+        {
+            frq_idx_n++;
+        }
+    }
+}
 
 void* run_visualizer(void* thread_id)
 {
-    const int WIDTH = 800;
-    const int HEIGHT = 600;
-    const int N_FRQS = 3;
-    char* IMG_PATH = "test1.bmp";
 
     Visualizer visualizer;
     visualizer.initialize(WIDTH, HEIGHT, IMG_PATH);
@@ -43,27 +68,12 @@ void* run_visualizer(void* thread_id)
 
             for (int content_idx = 0; (content_idx < N_FRQS  && content_idx < content_size); content_idx++)
             {
-                // TODO :: NEEDS MUTEX
-                //std::cout << "FRQ :: " << frq_cmp << "\n";
-                int frq_idx_n = 0;
-                for (int frq_idx = 500; frq_idx < 5000; frq_idx *= 3)
-                {
-                    if (frqs[content_idx] < frq_idx)
-                    {
-                        for (int x = content_idx; x < WIDTH * HEIGHT; x+=3)
-                        {
-                            pixels[x] += ((int)(amps[content_idx]/400 ) << (frq_idx_n*8)) & (0xFF << (frq_idx_n*8));
-                        }
-                        visualizer.set_pixels(pixels, WIDTH, HEIGHT);
-                        visualizer.render();
-                        frq_idx = 15000;
-                    }
-                    else
-                    {
-                        frq_idx_n++;
-                    }
-                }
+                //TODO
+                transform_pixmap(pixels, frqs[content_idx], amps[content_idx],
+                                 content_idx, N_FRQS);
             }
+            visualizer.set_pixels(pixels, WIDTH, HEIGHT);
+            visualizer.render();
         }
         usleep(50000);
     }
@@ -89,6 +99,8 @@ int main(int argc, char*argv[])
     pthread_t vis_thread;
     pthread_create(&vis_thread, NULL, run_visualizer, (void *)1);
 
+    BeatDetector beat_det(1.0, REC_BUF_SIZE, 0.25);
+
     float* data = new float[FFT_BUF_SIZE*2];
 
     while (1)
@@ -96,30 +108,31 @@ int main(int argc, char*argv[])
         if (recorder.read_to_buf() >= 0)
         {
             //recorder.print_buf();
-
             // FORMATTING DATA : APPENDING CHUNK
             int buf_idx = 0;
             memcpy(data, &data[REC_BUF_SIZE*2], (FFT_BUF_SIZE - REC_BUF_SIZE)*2*sizeof(float));
             for (int x = (FFT_BUF_SIZE - REC_BUF_SIZE)*2; x < FFT_BUF_SIZE*2; x+=2)
             {
-                data[x] = (float)(recorder.m_buf[buf_idx]) / 1024; //>> 10); // /1024
+                float datapoint = (float)(recorder.m_buf[buf_idx]) / 1024;
+                data[x] = datapoint; //>> 10); // /1024
+                beat_det.m_data[x>>1] = datapoint;
                 buf_idx++;
             }
+            std::cout << "HAS BEAT : " << beat_det.contains_beat() << " " << beat_det.m_threshold << "\n";
 
             // EXECUTING FFT
             clock_t t = clock();
             memcpy(fft.m_data, data, FFT_BUF_SIZE*2*sizeof(float));
-            content = fft.get_significant_frq(500.0, 300);
+            content = fft.get_significant_frq(FRQ_THRESHOLD, 300);
             t = clock() - t;
             std::cout << "EXEC_TIME : " << ((float)t)/CLOCKS_PER_SEC << "\n";
-            for (unsigned int x = 0; x < content.size(); x++)
+            /*for (unsigned int x = 0; x < content.size(); x++)
             {
                 std::cout << "FRQ : " << content[x].frq <<
                           " // AMPL: " << content[x].pwr << "\n";
-            }
+            }*/
             fft.reset();
             std::cout << " ------------- \n";
-
 
         }
     }

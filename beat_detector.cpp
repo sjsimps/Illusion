@@ -45,8 +45,13 @@ bool BeatDetector::contains_beat()
     {
         m_n_detections++;
     }
+    if (m_n_calls >= 100)
+    {
+        m_n_detections = m_n_detections >> 1;
+        m_n_calls = m_n_calls >> 1;
+    }
     m_prob_beat = (float)m_n_detections / (float)m_n_calls;
-    m_threshold = m_threshold - (m_prob_beat_target - m_prob_beat);
+    m_threshold = m_threshold - 10*(m_prob_beat_target - m_prob_beat);
     if (m_threshold < 0) m_threshold = 0.0;
     return retval;
 }

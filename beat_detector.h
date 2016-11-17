@@ -12,6 +12,6 @@ public:
     int m_lowpass;
     float m_prob_beat;
     float m_prob_beat_target;
-    float m_n_detections;
-    float m_n_calls;
+    int m_n_detections;
+    int m_n_calls;
 };

@@ -32,7 +32,7 @@ Visualizer::~Visualizer()
 }
 
 
-void Visualizer::initialize(int width, int height, char* image_path)
+void Visualizer::initialize(int width, int height, char* image_path, bool fullscreen)
 {
     // put the location where we want the texture to be drawn into a rectangle
     // I'm also scaling the texture 2x simply by setting the width and height
@@ -44,7 +44,10 @@ void Visualizer::initialize(int width, int height, char* image_path)
     // create the window and renderer
     // note that the renderer is accelerated
     m_win = SDL_CreateWindow("Image Loading", 100, 100, width, height, 0);
-    SDL_SetWindowFullscreen(m_win, SDL_WINDOW_FULLSCREEN);//_DESKTOP);
+    if (fullscreen)
+    {
+        SDL_SetWindowFullscreen(m_win, SDL_WINDOW_FULLSCREEN);//_DESKTOP);
+    }
     m_renderer = SDL_CreateRenderer(m_win, -1, SDL_RENDERER_ACCELERATED);
 
     // load our image

@@ -7,7 +7,7 @@ public:
     Visualizer();
     ~Visualizer();
 
-    void initialize(int width, int height, char* img_path);
+    void initialize(int width, int height, char* img_path, bool fullscreen);
     void set_texture(char* img_path);
     bool render();
     void get_pixels(uint32_t* pixel_buffer, int width, int height);

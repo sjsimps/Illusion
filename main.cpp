@@ -16,6 +16,7 @@ const int WIDTH = 800;
 const int HEIGHT = 600;
 const int N_FRQS = 3;
 const float FRQ_THRESHOLD = 150.0;
+const bool USE_FULLSCREEN = false;
 char* IMG_PATH = "test1.bmp";
 
 void transform_pixmap(uint32_t* pixels, float frq, float amp,
@@ -45,7 +46,7 @@ void* run_visualizer(void* thread_id)
 {
 
     Visualizer visualizer;
-    visualizer.initialize(WIDTH, HEIGHT, IMG_PATH);
+    visualizer.initialize(WIDTH, HEIGHT, IMG_PATH, USE_FULLSCREEN);
 
     uint32_t* pixels = new uint32_t[WIDTH*HEIGHT];
     visualizer.get_pixels(pixels, WIDTH, HEIGHT);
@@ -90,7 +91,7 @@ int main(int argc, char*argv[])
 {
     signal(SIGINT, sigint_handle);
 
-    const int REC_BUF_SIZE = 4096<<1;
+    const int REC_BUF_SIZE = 4096 >> 1;//<<1;
     const int FFT_BUF_SIZE = 32768 >> 2;
     const int SAMPLE_RATE = 44100; //Samples per sec
     PulseAudioRecorder recorder(REC_BUF_SIZE);
@@ -99,7 +100,7 @@ int main(int argc, char*argv[])
     pthread_t vis_thread;
     pthread_create(&vis_thread, NULL, run_visualizer, (void *)1);
 
-    BeatDetector beat_det(1.0, REC_BUF_SIZE, 0.25);
+    BeatDetector beat_det(500.0, REC_BUF_SIZE, 0.1);
 
     float* data = new float[FFT_BUF_SIZE*2];
 
@@ -110,15 +111,15 @@ int main(int argc, char*argv[])
             //recorder.print_buf();
             // FORMATTING DATA : APPENDING CHUNK
             int buf_idx = 0;
-            memcpy(data, &data[REC_BUF_SIZE*2], (FFT_BUF_SIZE - REC_BUF_SIZE)*2*sizeof(float));
+            memcpy(data, &data[REC_BUF_SIZE*2-1], (FFT_BUF_SIZE - REC_BUF_SIZE)*2*sizeof(float));
             for (int x = (FFT_BUF_SIZE - REC_BUF_SIZE)*2; x < FFT_BUF_SIZE*2; x+=2)
             {
-                float datapoint = (float)(recorder.m_buf[buf_idx]) / 1024;
-                data[x] = datapoint; //>> 10); // /1024
-                beat_det.m_data[x>>1] = datapoint;
+                float datapoint = (float)(recorder.m_buf[buf_idx]);
+                data[x] = datapoint / 1024; //>> 10);
+                beat_det.m_data[buf_idx] = datapoint;
                 buf_idx++;
             }
-            //std::cout << "HAS BEAT : " << beat_det.contains_beat() << " " << beat_det.m_threshold << "\n";
+            std::cout << "HAS BEAT : " << beat_det.contains_beat() << " " << beat_det.m_threshold << "\n";
 
             // EXECUTING FFT
             clock_t t = clock();
@@ -126,11 +127,11 @@ int main(int argc, char*argv[])
             content = fft.get_significant_frq(500.0, FRQ_THRESHOLD);
             t = clock() - t;
             std::cout << "EXEC_TIME : " << ((float)t)/CLOCKS_PER_SEC << "\n";
-            for (unsigned int x = 0; x < content.size(); x++)
+            /*for (unsigned int x = 0; x < content.size(); x++)
             {
                 std::cout << "FRQ : " << content[x].frq <<
                           " // AMPL: " << content[x].pwr << "\n";
-            }
+            }*/
             fft.reset();
             std::cout << " ------------- \n";
 

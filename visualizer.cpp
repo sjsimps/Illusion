@@ -67,6 +67,24 @@ void Visualizer::initialize(int width, int height, char* image_path, bool fullsc
 
     SDL_QueryTexture(m_img, NULL, NULL, &m_width, &m_height); // get the width and height of the texture
     SDL_FreeSurface(img_tmp);
+    SDL_FreeSurface(s);
+}
+
+void Visualizer::get_image_pixels(int width, int height, char* image_path, uint32_t* buffer)
+{
+    m_texr.x = 0;
+    m_texr.y = 0;
+    m_texr.w = width;
+    m_texr.h = height;
+
+    // load our image
+    SDL_Surface* img_tmp = IMG_Load(image_path);
+    SDL_Surface* s = SDL_CreateRGBSurface(0x00, width, height,
+                                          32 /*bits*/, 0xff /*r*/, 0xff00/*g*/, 0xff0000 /*b*/, 0xff000000);
+    SDL_BlitScaled(img_tmp, NULL, s, &m_texr);
+    memcpy(buffer, s->pixels, sizeof(uint32_t)*width*height);
+    SDL_FreeSurface(s);
+    SDL_FreeSurface(img_tmp);
 }
 
 bool Visualizer::render()

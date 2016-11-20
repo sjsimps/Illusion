@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
+#include <cstdlib>
 
 #include "small_fft.h"
 #include "pulseaudio_recorder.h"
@@ -12,18 +13,21 @@
 #include "beat_detector.h"
 
 std::vector<struct FreqContent> content;
+bool on_beat = false;
 const int WIDTH = 800;
 const int HEIGHT = 600;
 const int N_FRQS = 3;
 const float FRQ_THRESHOLD = 150.0;
 const bool USE_FULLSCREEN = false;
 char* IMG_PATH = "test1.bmp";
+char* IMG_PATH2 = "out.bmp";
 
-void transform_pixmap(uint32_t* pixels, float frq, float amp,
-                      int content_idx, int n_frqs)
+void transform_pixmap(uint32_t* pixels, float frq, float amp_f,
+                      int content_idx, int n_frqs, uint32_t* original_pixels)
 {
     // TODO :: NEEDS MUTEX
     //std::cout << "FRQ :: " << frq_cmp << "\n";
+    /*
     int frq_idx_n = 0;
     for (int frq_idx = 3*FRQ_THRESHOLD; frq_idx < 5000; frq_idx *= 3)
     {
@@ -31,7 +35,7 @@ void transform_pixmap(uint32_t* pixels, float frq, float amp,
         {
             for (int x = content_idx; x < WIDTH * HEIGHT; x+=n_frqs)
             {
-                pixels[x] += ((int)(amp/400) << (frq_idx_n*8)) & (0xFF << (frq_idx_n*8));
+                if (!on_beat) pixels[x] += ((int)(amp/400) << (frq_idx_n*(8))) & (0xFF << (frq_idx_n*8));
             }
             frq_idx = 15000;
         }
@@ -39,6 +43,50 @@ void transform_pixmap(uint32_t* pixels, float frq, float amp,
         {
             frq_idx_n++;
         }
+    }
+    */
+
+    int frq_idx = (int)(frq / FRQ_THRESHOLD);
+    int amp = 2;
+    if (on_beat) amp = (int)(amp_f) & 0xff;
+
+    for (int x = content_idx; x < WIDTH * HEIGHT; x+=n_frqs)
+    {
+        int newpix = pixels[x];
+        if (original_pixels && std::rand() < (RAND_MAX>>3))
+        {
+            newpix = original_pixels[x];
+        }
+        switch (frq_idx)
+        {
+            case 4:
+            case 5:
+                newpix = ((newpix+amp) & 0xff) | (newpix & 0xffffff00);
+                break;
+            case 2:
+            case 3:
+                newpix = ((newpix+(amp>>1)) & 0xff) | (newpix & 0xffffff00);
+                newpix = ((newpix+(amp<<7)) & 0xff00) | (newpix & 0xffff00ff);
+                break;
+            case 1:
+                newpix = ((newpix+(amp<<8)) & 0xff00) | (newpix & 0xffff00ff);
+                break;
+            case 6:
+            case 7:
+                newpix = ((newpix+(amp<<7)) & 0xff00) | (newpix & 0xffff00ff);
+                newpix = ((newpix+(amp<<15)) & 0xff0000) | (newpix & 0xff00ffff);
+                break;
+            case 8:
+            case 9:
+            case 10:
+                newpix = ((newpix+(amp<<16)) & 0xff0000) | (newpix & 0xff00ffff);
+                break;
+            default:
+                newpix = ((newpix+(amp<<15)) & 0xff0000) | (newpix & 0xff00ffff);
+                newpix = ((newpix+(amp>>1)) & 0xff) | (newpix & 0xffffff00);
+                break;
+        }
+        pixels[x] = newpix;
     }
 }
 
@@ -48,8 +96,10 @@ void* run_visualizer(void* thread_id)
     Visualizer visualizer;
     visualizer.initialize(WIDTH, HEIGHT, IMG_PATH, USE_FULLSCREEN);
 
+    uint32_t* original_pixels = new uint32_t[WIDTH*HEIGHT];
     uint32_t* pixels = new uint32_t[WIDTH*HEIGHT];
     visualizer.get_pixels(pixels, WIDTH, HEIGHT);
+    visualizer.get_image_pixels(WIDTH, HEIGHT,IMG_PATH, original_pixels);
     visualizer.render();
 
     std::cout << "VISUALIZER\n";
@@ -71,8 +121,23 @@ void* run_visualizer(void* thread_id)
             {
                 //TODO
                 transform_pixmap(pixels, frqs[content_idx], amps[content_idx],
-                                 content_idx, N_FRQS);
+                                 content_idx, N_FRQS, NULL);// original_pixels);
             }
+            visualizer.set_pixels(pixels, WIDTH, HEIGHT);
+            visualizer.render();
+        }
+        else
+        {
+            if (std::rand() < (RAND_MAX>>1))
+            {
+                visualizer.get_image_pixels(WIDTH, HEIGHT,IMG_PATH2, original_pixels);
+            }
+            else
+            {
+                visualizer.get_image_pixels(WIDTH, HEIGHT,IMG_PATH2, original_pixels);
+            }
+            transform_pixmap(pixels, 0, 0,
+                             0, 1, original_pixels);
             visualizer.set_pixels(pixels, WIDTH, HEIGHT);
             visualizer.render();
         }
@@ -119,7 +184,8 @@ int main(int argc, char*argv[])
                 beat_det.m_data[buf_idx] = datapoint;
                 buf_idx++;
             }
-            std::cout << "HAS BEAT : " << beat_det.contains_beat() << " " << beat_det.m_threshold << "\n";
+            on_beat = beat_det.contains_beat();
+            std::cout << "HAS BEAT : " << on_beat << " " << beat_det.m_threshold << "\n";
 
             // EXECUTING FFT
             clock_t t = clock();

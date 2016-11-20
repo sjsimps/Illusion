@@ -12,6 +12,7 @@ public:
     bool render();
     void get_pixels(uint32_t* pixel_buffer, int width, int height);
     void set_pixels(uint32_t* pixel_buffer, int width, int height);
+    void get_image_pixels(int width, int height, char* image_path, uint32_t* buffer);
 
     SDL_Window* m_win;
     SDL_Renderer* m_renderer;

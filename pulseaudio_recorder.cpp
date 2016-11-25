@@ -43,6 +43,8 @@ PulseAudioRecorder::PulseAudioRecorder(int buf_size)
     {
         m_buf[x] = 0;
     }
+
+    m_max_signal = 1;
 }
 
 PulseAudioRecorder::~PulseAudioRecorder()
@@ -70,6 +72,43 @@ void PulseAudioRecorder::print_buf()
     }
 }
 
+void PulseAudioRecorder::normalize_buffer()
+{
+    unsigned int normalize_factor = INT16_MAX / m_max_signal;
+    unsigned int normalize_idx;
+    for (normalize_idx = 14; normalize_idx >=0; normalize_idx--)
+    {
+        if ( (0x1 << normalize_idx) & normalize_factor )
+        {
+            break;
+        }
+    }
+    if (normalize_idx >1)
+    {
+        for (int x = 0; x < m_buf_size; x++)
+        {
+            int16_t element = m_buf[x];
+            if(element > m_max_signal)
+            {
+                m_max_signal = element;
+            }
+            m_buf[x] = element * (0x1 << normalize_idx);
+        }
+    }
+    else if (normalize_idx == 0)
+    {
+        for (int x = 0; x < m_buf_size; x++)
+        {
+            int16_t element = m_buf[x];
+            if(element > m_max_signal)
+            {
+                m_max_signal = element;
+            }
+            m_buf[x] = element / 2;
+        }
+    }
+}
+
 int PulseAudioRecorder::read_to_buf()
 {
     int error;
@@ -78,6 +117,7 @@ int PulseAudioRecorder::read_to_buf()
     {
         fprintf(stderr, __FILE__": pa_simple_read() failed: %s\n", pa_strerror(error));
     }
+    normalize_buffer();
     return error;
 }
 

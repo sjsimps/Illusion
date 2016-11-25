@@ -19,36 +19,15 @@ const int HEIGHT = 600;
 const int N_FRQS = 3;
 const float FRQ_THRESHOLD = 150.0;
 const bool USE_FULLSCREEN = false;
+//const bool USE_FULLSCREEN = true;
 char* IMG_PATH = "test1.bmp";
 char* IMG_PATH2 = "out.bmp";
 
 void transform_pixmap(uint32_t* pixels, float frq, float amp_f,
                       int content_idx, int n_frqs, uint32_t* original_pixels)
 {
-    // TODO :: NEEDS MUTEX
-    //std::cout << "FRQ :: " << frq_cmp << "\n";
-    /*
-    int frq_idx_n = 0;
-    for (int frq_idx = 3*FRQ_THRESHOLD; frq_idx < 5000; frq_idx *= 3)
-    {
-        if (frq < frq_idx)
-        {
-            for (int x = content_idx; x < WIDTH * HEIGHT; x+=n_frqs)
-            {
-                if (!on_beat) pixels[x] += ((int)(amp/400) << (frq_idx_n*(8))) & (0xFF << (frq_idx_n*8));
-            }
-            frq_idx = 15000;
-        }
-        else
-        {
-            frq_idx_n++;
-        }
-    }
-    */
-
     int frq_idx = (int)(frq / FRQ_THRESHOLD);
-    int amp = 2;
-    if (on_beat) amp = (int)(amp_f) & 0xff;
+    int amp = ((int)(amp_f/250.0) & 0xff) * (1 - 3*on_beat);
 
     for (int x = content_idx; x < WIDTH * HEIGHT; x+=n_frqs)
     {
@@ -59,17 +38,17 @@ void transform_pixmap(uint32_t* pixels, float frq, float amp_f,
         }
         switch (frq_idx)
         {
-            case 4:
-            case 5:
-                newpix = ((newpix+amp) & 0xff) | (newpix & 0xffffff00);
+            case 1:
+                newpix = ((newpix+(amp<<8)) & 0xff00) | (newpix & 0xffff00ff);
                 break;
             case 2:
             case 3:
                 newpix = ((newpix+(amp>>1)) & 0xff) | (newpix & 0xffffff00);
                 newpix = ((newpix+(amp<<7)) & 0xff00) | (newpix & 0xffff00ff);
                 break;
-            case 1:
-                newpix = ((newpix+(amp<<8)) & 0xff00) | (newpix & 0xffff00ff);
+            case 4:
+            case 5:
+                newpix = ((newpix+amp) & 0xff) | (newpix & 0xffffff00);
                 break;
             case 6:
             case 7:
@@ -128,9 +107,9 @@ void* run_visualizer(void* thread_id)
         }
         else
         {
-            if (std::rand() < (RAND_MAX>>1))
+            if ( (time(NULL) / 60) % 2)
             {
-                visualizer.get_image_pixels(WIDTH, HEIGHT,IMG_PATH2, original_pixels);
+                visualizer.get_image_pixels(WIDTH, HEIGHT,IMG_PATH, original_pixels);
             }
             else
             {
@@ -156,7 +135,7 @@ int main(int argc, char*argv[])
 {
     signal(SIGINT, sigint_handle);
 
-    const int REC_BUF_SIZE = 4096 >> 1;//<<1;
+    const int REC_BUF_SIZE = 4096 >> 3;//<<1;
     const int FFT_BUF_SIZE = 32768 >> 2;
     const int SAMPLE_RATE = 44100; //Samples per sec
     PulseAudioRecorder recorder(REC_BUF_SIZE);
@@ -165,7 +144,7 @@ int main(int argc, char*argv[])
     pthread_t vis_thread;
     pthread_create(&vis_thread, NULL, run_visualizer, (void *)1);
 
-    BeatDetector beat_det(500.0, REC_BUF_SIZE, 0.1);
+    BeatDetector beat_det(500.0, REC_BUF_SIZE, 0.05);
 
     float* data = new float[FFT_BUF_SIZE*2];
 
@@ -173,14 +152,13 @@ int main(int argc, char*argv[])
     {
         if (recorder.read_to_buf() >= 0)
         {
-            //recorder.print_buf();
             // FORMATTING DATA : APPENDING CHUNK
             int buf_idx = 0;
             memcpy(data, &data[REC_BUF_SIZE*2-1], (FFT_BUF_SIZE - REC_BUF_SIZE)*2*sizeof(float));
             for (int x = (FFT_BUF_SIZE - REC_BUF_SIZE)*2; x < FFT_BUF_SIZE*2; x+=2)
             {
                 float datapoint = (float)(recorder.m_buf[buf_idx]);
-                data[x] = datapoint / 1024; //>> 10);
+                data[x] = datapoint / 1700; //>> 10);
                 beat_det.m_data[buf_idx] = datapoint;
                 buf_idx++;
             }

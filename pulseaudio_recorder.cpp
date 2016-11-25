@@ -21,6 +21,8 @@
 
 #include "pulseaudio_recorder.h"
 
+#define NORMALIZE_STEP 10
+
 PulseAudioRecorder::PulseAudioRecorder(int buf_size)
 {
     /* The sample type to use */
@@ -72,10 +74,19 @@ void PulseAudioRecorder::print_buf()
     }
 }
 
-void PulseAudioRecorder::normalize_buffer()
+float PulseAudioRecorder::normalize_buffer()
 {
     unsigned int normalize_factor = INT16_MAX / m_max_signal;
     unsigned int normalize_idx;
+
+    for (int x = 0; x < m_buf_size; x+=NORMALIZE_STEP)
+    {
+        if(m_buf[x] > m_max_signal)
+        {
+            m_max_signal = m_buf[x];
+        }
+    }
+
     for (normalize_idx = 14; normalize_idx >=0; normalize_idx--)
     {
         if ( (0x1 << normalize_idx) & normalize_factor )
@@ -85,28 +96,13 @@ void PulseAudioRecorder::normalize_buffer()
     }
     if (normalize_idx >1)
     {
-        for (int x = 0; x < m_buf_size; x++)
-        {
-            int16_t element = m_buf[x];
-            if(element > m_max_signal)
-            {
-                m_max_signal = element;
-            }
-            m_buf[x] = element * (0x1 << normalize_idx);
-        }
+        return (float)(0x1 << (normalize_idx-1));
     }
     else if (normalize_idx == 0)
     {
-        for (int x = 0; x < m_buf_size; x++)
-        {
-            int16_t element = m_buf[x];
-            if(element > m_max_signal)
-            {
-                m_max_signal = element;
-            }
-            m_buf[x] = element / 2;
-        }
+        return (1.0/2.0);
     }
+    return 1.0;
 }
 
 int PulseAudioRecorder::read_to_buf()
@@ -117,7 +113,6 @@ int PulseAudioRecorder::read_to_buf()
     {
         fprintf(stderr, __FILE__": pa_simple_read() failed: %s\n", pa_strerror(error));
     }
-    normalize_buffer();
     return error;
 }
 

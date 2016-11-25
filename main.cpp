@@ -150,15 +150,19 @@ int main(int argc, char*argv[])
 
     while (1)
     {
+        // READING AUDIO BUFFER
         if (recorder.read_to_buf() >= 0)
         {
-            // FORMATTING DATA : APPENDING CHUNK
+            // GET NORMALIZATION
+            float normalization_factor = recorder.normalize_buffer() / 500;
+
+            // FORMATTING DATA AND APPENDING CHUNK TO FFT BUFFER
             int buf_idx = 0;
             memcpy(data, &data[REC_BUF_SIZE*2-1], (FFT_BUF_SIZE - REC_BUF_SIZE)*2*sizeof(float));
             for (int x = (FFT_BUF_SIZE - REC_BUF_SIZE)*2; x < FFT_BUF_SIZE*2; x+=2)
             {
                 float datapoint = (float)(recorder.m_buf[buf_idx]);
-                data[x] = datapoint / 1700; //>> 10);
+                data[x] = datapoint * normalization_factor;
                 beat_det.m_data[buf_idx] = datapoint;
                 buf_idx++;
             }

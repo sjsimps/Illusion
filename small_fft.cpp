@@ -81,22 +81,48 @@ bool compareByAmpl(const struct FreqContent a, const struct FreqContent b)
     return std::abs(a.pwr) > std::abs(b.pwr);
 }
 
-std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold, int lower_frq_bound)
+std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold,
+                                                              int lower_frq_bound,
+                                                              int lpf_size)
 {
     std::vector<struct FreqContent> retval;
     comp_FFT();
     const double frq_const = 1.0 / (m_sample_width * m_sample_period);
+
+    //LPF on the data:
+    float last_data = m_data[lower_frq_bound];
     for (int x = lower_frq_bound; x < m_sample_width/2; x+=2)
     {
-        double ampl = m_data[x];
-        if (std::abs(ampl) > threshold)
-        {
+        m_data[x] = (m_data[x] + last_data*(lpf_size-1)) / lpf_size;
+        last_data = m_data[x];
+    }
 
-            struct FreqContent content;
-            content.frq = (double)(x>>1)*frq_const;
-            content.pwr = std::abs(ampl);
-            retval.push_back(content);
+    //Find local maxima and append to list if above threshold
+    bool falling = false;
+    double ampl = 0;
+    double frq = 0;
+    for (int x = lower_frq_bound; x < m_sample_width/2; x+=2)
+    {
+        if (ampl)
+        {
+            if (!falling && std::abs(m_data[x]) < ampl)
+            {
+                if (ampl > threshold)
+                {
+                    struct FreqContent content;
+                    content.frq = frq;
+                    content.pwr = ampl;
+                    retval.push_back(content);
+                    falling = true;
+                }
+            }
+            else if (falling && std::abs(m_data[x]) > ampl)
+            {
+                falling = false;
+            }
         }
+        ampl = std::abs(m_data[x]);
+        frq = (double)(x>>1)*frq_const;
     }
     std::sort(retval.begin(), retval.end(), compareByAmpl);
     return retval;

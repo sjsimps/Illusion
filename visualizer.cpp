@@ -2,6 +2,7 @@
 #include <iostream>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <string>
 
 #include "visualizer.h"
 
@@ -32,7 +33,7 @@ Visualizer::~Visualizer()
 }
 
 
-void Visualizer::initialize(int width, int height, char* image_path, bool fullscreen)
+void Visualizer::initialize(int width, int height, std::string image_path, bool fullscreen)
 {
     // put the location where we want the texture to be drawn into a rectangle
     // I'm also scaling the texture 2x simply by setting the width and height
@@ -51,7 +52,7 @@ void Visualizer::initialize(int width, int height, char* image_path, bool fullsc
     m_renderer = SDL_CreateRenderer(m_win, -1, SDL_RENDERER_ACCELERATED);
 
     // load our image
-    SDL_Surface* img_tmp = IMG_Load(image_path);
+    SDL_Surface* img_tmp = IMG_Load(image_path.c_str());
     //img_tmp = SDL_ConvertSurfaceFormat(img_tmp, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING);
 
     SDL_Surface* s = SDL_CreateRGBSurface(0x00, width, height,
@@ -70,7 +71,7 @@ void Visualizer::initialize(int width, int height, char* image_path, bool fullsc
     SDL_FreeSurface(s);
 }
 
-void Visualizer::get_image_pixels(int width, int height, char* image_path, uint32_t* buffer)
+void Visualizer::get_image_pixels(int width, int height, std::string image_path, uint32_t* buffer)
 {
     m_texr.x = 0;
     m_texr.y = 0;
@@ -78,7 +79,7 @@ void Visualizer::get_image_pixels(int width, int height, char* image_path, uint3
     m_texr.h = height;
 
     // load our image
-    SDL_Surface* img_tmp = IMG_Load(image_path);
+    SDL_Surface* img_tmp = IMG_Load(image_path.c_str());
     SDL_Surface* s = SDL_CreateRGBSurface(0x00, width, height,
                                           32 /*bits*/, 0xff /*r*/, 0xff00/*g*/, 0xff0000 /*b*/, 0xff000000);
     SDL_BlitScaled(img_tmp, NULL, s, &m_texr);
@@ -147,25 +148,3 @@ void Visualizer::set_pixels(uint32_t* pixel_buffer, int width, int height)
     SDL_UnlockTexture(m_img);
 }
 
-/*
-int main (int argc, char *argv[])
-{
-    Visualizer visualizer;
-    visualizer.initialize(WIDTH, HEIGHT, IMG_PATH);
-
-    uint32_t* pixels = new uint32_t[WIDTH*HEIGHT];
-    visualizer.get_pixels(pixels, WIDTH, HEIGHT);
-
-    int count = 0;
-    while (visualizer.render())
-    {
-        for (int x = 0; x <  WIDTH * HEIGHT; x++)
-        {
-            pixels[count] += (x%7) - (x%3) + x;
-            count = (count + 1) % (WIDTH * HEIGHT);
-        }
-        visualizer.set_pixels(pixels, WIDTH, HEIGHT);
-    }
-    return 0;
-}
-*/

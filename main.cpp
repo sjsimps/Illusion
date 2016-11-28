@@ -6,23 +6,58 @@
 #include <time.h>
 #include <signal.h>
 #include <cstdlib>
+#include <dirent.h>
+#include <string>
+#include <vector>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "small_fft.h"
 #include "pulseaudio_recorder.h"
 #include "visualizer.h"
 #include "beat_detector.h"
 
-std::vector<struct FreqContent> content;
-bool on_beat = false;
 const int WIDTH = 800;
 const int HEIGHT = 600;
 const int N_FRQS = 3;
+const float IMG_CHANGE_TIME = 5.0;
 const float FRQ_THRESHOLD = 150.0;
 const float AMPL_THRESHOLD = 250.0;
 const bool USE_FULLSCREEN = false;
 //const bool USE_FULLSCREEN = true;
-char* IMG_PATH = "test1.bmp";
-char* IMG_PATH2 = "out.bmp";
+
+static std::vector<std::string> image_files;
+static std::vector<struct FreqContent> content;
+static bool on_beat = false;
+
+/* Returns a list of files in a directory (except the ones that begin with a dot) */
+
+void GetImages(std::vector<std::string>* out)
+{
+    DIR *dir;
+    class dirent *ent;
+    class stat st;
+
+    dir = opendir("./Images");
+    while ((ent = readdir(dir)) != NULL) {
+        const std::string file_name = ent->d_name;
+        const std::string full_file_name = "./Images/" + file_name;
+
+        if (file_name[0] == '.')
+            continue;
+
+        if (stat(full_file_name.c_str(), &st) == -1)
+            continue;
+
+        const bool is_directory = (st.st_mode & S_IFDIR) != 0;
+
+        if (is_directory)
+            continue;
+
+        out->push_back(full_file_name);
+    }
+    closedir(dir);
+}
 
 void transform_pixmap(uint32_t* pixels, float frq, float amp_f,
                       int content_idx, int n_frqs, uint32_t* original_pixels)
@@ -74,17 +109,18 @@ void* run_visualizer(void* thread_id)
 {
 
     Visualizer visualizer;
-    visualizer.initialize(WIDTH, HEIGHT, IMG_PATH, USE_FULLSCREEN);
+    visualizer.initialize(WIDTH, HEIGHT, image_files[0], USE_FULLSCREEN);
 
     uint32_t* original_pixels = new uint32_t[WIDTH*HEIGHT];
     uint32_t* pixels = new uint32_t[WIDTH*HEIGHT];
     visualizer.get_pixels(pixels, WIDTH, HEIGHT);
-    visualizer.get_image_pixels(WIDTH, HEIGHT,IMG_PATH, original_pixels);
+    visualizer.get_image_pixels(WIDTH, HEIGHT,image_files[0], original_pixels);
     visualizer.render();
 
     std::cout << "VISUALIZER\n";
 
     bool changing_image = false;
+    clock_t last_image_change = clock();
 
     while(1)
     {
@@ -107,26 +143,24 @@ void* run_visualizer(void* thread_id)
             for (int content_idx = 0; (content_idx < N_FRQS  && content_idx < content_size); content_idx++)
             {
                 transform_pixmap(pixels, frqs[content_idx], amps[content_idx],
-                                 content_idx, N_FRQS, NULL);// original_pixels);
+                                 content_idx, N_FRQS, NULL);
             }
             visualizer.set_pixels(pixels, WIDTH, HEIGHT);
             visualizer.render();
         }
         else
         {
-            changing_image = true;
-            if ( (time(NULL) / 60) % 2)
+            if ((float)(clock()-last_image_change)/CLOCKS_PER_SEC >= IMG_CHANGE_TIME)
             {
-                visualizer.get_image_pixels(WIDTH, HEIGHT,IMG_PATH, original_pixels);
-            }
-            else
-            {
-                visualizer.get_image_pixels(WIDTH, HEIGHT,IMG_PATH2, original_pixels);
+                int image_num = std::rand() % image_files.size();
+                last_image_change = clock();
+                visualizer.get_image_pixels(WIDTH, HEIGHT,image_files[image_num], original_pixels);
             }
             transform_pixmap(pixels, 0, 0,
                              0, 1, original_pixels);
             visualizer.set_pixels(pixels, WIDTH, HEIGHT);
             visualizer.render();
+            changing_image = true;
         }
         usleep(50000);
     }
@@ -142,6 +176,8 @@ void sigint_handle(int p)
 int main(int argc, char*argv[])
 {
     signal(SIGINT, sigint_handle);
+
+    GetImages(&image_files);
 
     const int REC_BUF_SIZE = 4096 >> 3;//<<1;
     const int FFT_BUF_SIZE = 32768 >> 2;

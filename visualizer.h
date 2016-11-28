@@ -1,4 +1,5 @@
 
+#include <string>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 class Visualizer
@@ -7,12 +8,12 @@ public:
     Visualizer();
     ~Visualizer();
 
-    void initialize(int width, int height, char* img_path, bool fullscreen);
-    void set_texture(char* img_path);
+    void initialize(int width, int height, std::string img_path, bool fullscreen);
+    void set_texture(std::string img_path);
     bool render();
     void get_pixels(uint32_t* pixel_buffer, int width, int height);
     void set_pixels(uint32_t* pixel_buffer, int width, int height);
-    void get_image_pixels(int width, int height, char* image_path, uint32_t* buffer);
+    void get_image_pixels(int width, int height, std::string image_path, uint32_t* buffer);
 
     SDL_Window* m_win;
     SDL_Renderer* m_renderer;

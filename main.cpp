@@ -109,12 +109,13 @@ void* run_visualizer(void* thread_id)
 {
 
     Visualizer visualizer;
-    visualizer.initialize(WIDTH, HEIGHT, image_files[0], USE_FULLSCREEN);
+    int image_num = std::rand() % image_files.size();
+    visualizer.initialize(WIDTH, HEIGHT, image_files[image_num], USE_FULLSCREEN);
 
     uint32_t* original_pixels = new uint32_t[WIDTH*HEIGHT];
     uint32_t* pixels = new uint32_t[WIDTH*HEIGHT];
     visualizer.get_pixels(pixels, WIDTH, HEIGHT);
-    visualizer.get_image_pixels(WIDTH, HEIGHT,image_files[0], original_pixels);
+    visualizer.get_image_pixels(WIDTH, HEIGHT,image_files[image_num], original_pixels);
     visualizer.render();
 
     std::cout << "VISUALIZER\n";
@@ -152,7 +153,7 @@ void* run_visualizer(void* thread_id)
         {
             if ((float)(clock()-last_image_change)/CLOCKS_PER_SEC >= IMG_CHANGE_TIME)
             {
-                int image_num = std::rand() % image_files.size();
+                image_num = std::rand() % image_files.size();
                 last_image_change = clock();
                 visualizer.get_image_pixels(WIDTH, HEIGHT,image_files[image_num], original_pixels);
             }
@@ -176,7 +177,7 @@ void sigint_handle(int p)
 int main(int argc, char*argv[])
 {
     signal(SIGINT, sigint_handle);
-
+    srand (time(NULL));
     GetImages(&image_files);
 
     const int REC_BUF_SIZE = 4096 >> 3;//<<1;

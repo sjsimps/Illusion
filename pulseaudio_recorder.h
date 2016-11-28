@@ -15,5 +15,6 @@ public:
     pa_sample_spec m_spec;
     int16_t* m_buf;
     int m_buf_size;
-    int16_t m_max_signal;
+    uint32_t m_sample_rate;
+    float m_max_signal;
 };

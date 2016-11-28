@@ -26,9 +26,10 @@
 PulseAudioRecorder::PulseAudioRecorder(int buf_size)
 {
     /* The sample type to use */
+    m_sample_rate = 44100;
     m_spec = {
         .format = PA_SAMPLE_S16LE,
-        .rate = 44100,
+        .rate = m_sample_rate,
         .channels = 1
     };
     m_simple = NULL;
@@ -76,33 +77,25 @@ void PulseAudioRecorder::print_buf()
 
 float PulseAudioRecorder::normalize_buffer()
 {
-    unsigned int normalize_factor = INT16_MAX / m_max_signal;
-    unsigned int normalize_idx;
-
+    float new_max = 0;
     for (int x = 0; x < m_buf_size; x+=NORMALIZE_STEP)
     {
-        if(m_buf[x] > m_max_signal)
+        if (std::abs(m_buf[x]) > new_max)
         {
-            m_max_signal = m_buf[x];
+            new_max = std::abs(m_buf[x]);
         }
     }
-
-    for (normalize_idx = 14; normalize_idx >=0; normalize_idx--)
+    if (new_max > m_max_signal)
     {
-        if ( (0x1 << normalize_idx) & normalize_factor )
-        {
-            break;
-        }
+        m_max_signal = new_max;
     }
-    if (normalize_idx >1)
+    else
     {
-        return (float)(0x1 << (normalize_idx-1));
+        int lowpass = 1000;
+        m_max_signal = (new_max + m_max_signal*(lowpass-1) ) / lowpass;
     }
-    else if (normalize_idx == 0)
-    {
-        return (1.0/2.0);
-    }
-    return 1.0;
+    std::cout << (float)(m_max_signal) / float(INT16_MAX) << "\n";
+    return (float)(m_max_signal) / float(INT16_MAX);
 }
 
 int PulseAudioRecorder::read_to_buf()

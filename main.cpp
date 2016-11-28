@@ -18,6 +18,7 @@ const int WIDTH = 800;
 const int HEIGHT = 600;
 const int N_FRQS = 3;
 const float FRQ_THRESHOLD = 150.0;
+const float AMPL_THRESHOLD = 250.0;
 const bool USE_FULLSCREEN = false;
 //const bool USE_FULLSCREEN = true;
 char* IMG_PATH = "test1.bmp";
@@ -27,12 +28,12 @@ void transform_pixmap(uint32_t* pixels, float frq, float amp_f,
                       int content_idx, int n_frqs, uint32_t* original_pixels)
 {
     int frq_idx = (int)(frq / FRQ_THRESHOLD);
-    int amp = ((int)(amp_f/250.0) & 0xff) * (1 - 3*on_beat);
+    int amp = ((int)(amp_f/ AMPL_THRESHOLD) & 0xff) * (1 + 2*on_beat);
 
     for (int x = content_idx; x < WIDTH * HEIGHT; x+=n_frqs)
     {
         int newpix = pixels[x];
-        if (original_pixels && std::rand() < (RAND_MAX>>3))
+        if (original_pixels && std::rand() < (RAND_MAX>>2))
         {
             newpix = original_pixels[x];
         }
@@ -83,11 +84,18 @@ void* run_visualizer(void* thread_id)
 
     std::cout << "VISUALIZER\n";
 
+    bool changing_image = false;
+
     while(1)
     {
         int content_size = content.size();
         if (content_size > 0)
         {
+            if (changing_image)
+            {
+                memcpy(pixels,original_pixels,sizeof(uint32_t)*WIDTH*HEIGHT);
+                changing_image = false;
+            }
             float frqs[N_FRQS];
             float amps[N_FRQS];
             for (int z = 0; (z < N_FRQS  && z < content_size); z++)
@@ -98,7 +106,6 @@ void* run_visualizer(void* thread_id)
 
             for (int content_idx = 0; (content_idx < N_FRQS  && content_idx < content_size); content_idx++)
             {
-                //TODO
                 transform_pixmap(pixels, frqs[content_idx], amps[content_idx],
                                  content_idx, N_FRQS, NULL);// original_pixels);
             }
@@ -107,6 +114,7 @@ void* run_visualizer(void* thread_id)
         }
         else
         {
+            changing_image = true;
             if ( (time(NULL) / 60) % 2)
             {
                 visualizer.get_image_pixels(WIDTH, HEIGHT,IMG_PATH, original_pixels);
@@ -154,7 +162,8 @@ int main(int argc, char*argv[])
         if (recorder.read_to_buf() >= 0)
         {
             // GET NORMALIZATION
-            float normalization_factor = recorder.normalize_buffer() / 500;
+            float normalization_factor = 1.0 / (recorder.normalize_buffer() * 2000.0 + 1.0);
+            std::cout << "NORMALIZE: " << normalization_factor << "\n";
 
             // FORMATTING DATA AND APPENDING CHUNK TO FFT BUFFER
             int buf_idx = 0;
@@ -172,14 +181,14 @@ int main(int argc, char*argv[])
             // EXECUTING FFT
             clock_t t = clock();
             memcpy(fft.m_data, data, FFT_BUF_SIZE*2*sizeof(float));
-            content = fft.get_significant_frq(500.0, FRQ_THRESHOLD);
+            content = fft.get_significant_frq(AMPL_THRESHOLD, FRQ_THRESHOLD, 2);
             t = clock() - t;
             std::cout << "EXEC_TIME : " << ((float)t)/CLOCKS_PER_SEC << "\n";
-            /*for (unsigned int x = 0; x < content.size(); x++)
+            for (unsigned int x = 0; x < content.size(); x++)
             {
                 std::cout << "FRQ : " << content[x].frq <<
                           " // AMPL: " << content[x].pwr << "\n";
-            }*/
+            }
             fft.reset();
             std::cout << " ------------- \n";
 

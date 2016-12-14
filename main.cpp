@@ -28,9 +28,10 @@ const bool USE_FULLSCREEN = false;
 
 static std::vector<std::string> image_files;
 static std::vector<struct FreqContent> content;
-static bool on_beat = false;
+static int on_beat = 0;
 
 static pthread_mutex_t content_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t beat_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* Returns a list of files in a directory (except the ones that begin with a dot) */
 
@@ -65,7 +66,15 @@ void transform_pixmap(uint32_t* pixels, float frq, float amp_f,
                       int content_idx, int n_frqs, uint32_t* original_pixels)
 {
     int frq_idx = (int)(frq / FRQ_THRESHOLD);
-    int amp = ((int)(amp_f/ AMPL_THRESHOLD) & 0xff) * (1 + 2*on_beat);
+    int amp = ((int)(amp_f/ AMPL_THRESHOLD) & 0xff);
+
+    pthread_mutex_lock(&beat_mutex);
+    if (on_beat > 0)
+    {
+        on_beat--;
+        amp *= on_beat;
+    }
+    pthread_mutex_unlock(&beat_mutex);
 
     for (int x = content_idx; x < WIDTH * HEIGHT; x+=n_frqs)
     {
@@ -219,7 +228,14 @@ int main(int argc, char*argv[])
                 beat_det.m_data[buf_idx] = datapoint;
                 buf_idx++;
             }
-            on_beat = beat_det.contains_beat();
+
+            int beat_amp = beat_det.contains_beat();
+            if (beat_amp > 0)
+            {
+                pthread_mutex_lock(&beat_mutex);
+                on_beat++;
+                pthread_mutex_unlock(&beat_mutex);
+            }
             std::cout << "HAS BEAT : " << on_beat << " " << beat_det.m_threshold << "\n";
 
             // EXECUTING FFT
@@ -235,11 +251,11 @@ int main(int argc, char*argv[])
 
             t = clock() - t;
             std::cout << "EXEC_TIME : " << ((float)t)/CLOCKS_PER_SEC << "\n";
-            for (unsigned int x = 0; x < content.size(); x++)
+            /*for (unsigned int x = 0; x < content.size(); x++)
             {
                 std::cout << "FRQ : " << content[x].frq <<
                           " // AMPL: " << content[x].pwr << "\n";
-            }
+            }*/
             fft.reset();
             std::cout << " ------------- \n";
 

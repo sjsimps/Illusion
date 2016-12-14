@@ -3,7 +3,7 @@ class BeatDetector
 public:
     BeatDetector(float threshold, int buff_size, float prob_target);
     ~BeatDetector();
-    bool contains_beat();
+    int contains_beat();
 
     float* m_data;
     int m_data_size;

@@ -23,25 +23,25 @@ BeatDetector::~BeatDetector()
     delete m_data;
 }
 
-bool BeatDetector::contains_beat()
+int BeatDetector::contains_beat()
 {
     float delta = 0;
     float prev_ampl;
-    bool retval = false;
+    int retval = 0;
     for (int x = 0; x < m_data_size; x++)
     {
         prev_ampl = m_ampl;
         m_ampl = (m_data[x] + (m_lowpass-1)*m_ampl)/m_lowpass;
-        if (!retval)
+        delta = std::abs(m_ampl - prev_ampl);
+        //std::cout << m_ampl << " // " << delta << "\n";
+        if (delta > m_threshold)
         {
-            delta = std::abs(m_ampl - prev_ampl);
-            //std::cout << m_ampl << " // " << delta << "\n";
-            if (delta > m_threshold) retval = true;
+            retval = (retval < delta/m_threshold) ? delta/m_threshold : retval;
         }
     }
 
     m_n_calls++;
-    if (retval)
+    if (retval > 0)
     {
         m_n_detections++;
     }

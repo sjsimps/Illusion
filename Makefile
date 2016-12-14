@@ -9,7 +9,7 @@ all: small_fft
 
 .PHONY: debug
 debug:
-	g++ $(DEBUG_FLAGS) $(SRC) -o $(PROG)
+	g++ $(DEBUG_FLAGS) $(SRC) ${SDL} -o $(PROG)
 
 .PHONY: clean
 clean:

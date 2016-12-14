@@ -30,6 +30,8 @@ static std::vector<std::string> image_files;
 static std::vector<struct FreqContent> content;
 static bool on_beat = false;
 
+static pthread_mutex_t content_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 /* Returns a list of files in a directory (except the ones that begin with a dot) */
 
 void GetImages(std::vector<std::string>* out)
@@ -123,22 +125,27 @@ void* run_visualizer(void* thread_id)
     bool changing_image = false;
     clock_t last_image_change = clock();
 
+    float frqs[N_FRQS];
+    float amps[N_FRQS];
+
     while(1)
     {
+        pthread_mutex_lock(&content_mutex);
         int content_size = content.size();
+        for (int z = 0; (z < N_FRQS  && z < content_size); z++)
+        {
+            //NEEDS A MUTEX!!!
+            frqs[z] = content[z].frq;
+            amps[z] = content[z].pwr;
+        }
+        pthread_mutex_unlock(&content_mutex);
+
         if (content_size > 0)
         {
             if (changing_image)
             {
                 memcpy(pixels,original_pixels,sizeof(uint32_t)*WIDTH*HEIGHT);
                 changing_image = false;
-            }
-            float frqs[N_FRQS];
-            float amps[N_FRQS];
-            for (int z = 0; (z < N_FRQS  && z < content_size); z++)
-            {
-                frqs[z] = content[z].frq;
-                amps[z] = content[z].pwr;
             }
 
             for (int content_idx = 0; (content_idx < N_FRQS  && content_idx < content_size); content_idx++)
@@ -218,7 +225,14 @@ int main(int argc, char*argv[])
             // EXECUTING FFT
             clock_t t = clock();
             memcpy(fft.m_data, data, FFT_BUF_SIZE*2*sizeof(float));
-            content = fft.get_significant_frq(AMPL_THRESHOLD, FRQ_THRESHOLD, 2);
+
+            static std::vector<struct FreqContent> content_tmp;
+            content_tmp = fft.get_significant_frq(AMPL_THRESHOLD, FRQ_THRESHOLD, 2);
+
+            pthread_mutex_lock(&content_mutex);
+            content = content_tmp;
+            pthread_mutex_unlock(&content_mutex);
+
             t = clock() - t;
             std::cout << "EXEC_TIME : " << ((float)t)/CLOCKS_PER_SEC << "\n";
             for (unsigned int x = 0; x < content.size(); x++)

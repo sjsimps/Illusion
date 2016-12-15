@@ -11,7 +11,7 @@ BeatDetector::BeatDetector(float threshold, int buff_size, float prob_target)
     m_threshold = threshold;
     m_data = new float[buff_size];
     m_data_size = buff_size;
-    m_lowpass = 40;
+    m_lowpass = 1;
     m_n_detections = 0;
     m_n_calls = 0;
     m_prob_beat = 0;
@@ -36,7 +36,7 @@ int BeatDetector::contains_beat()
         //std::cout << m_ampl << " // " << delta << "\n";
         if (delta > m_threshold)
         {
-            retval = (retval < delta/m_threshold) ? delta/m_threshold : retval;
+            retval += delta/m_threshold;
         }
     }
 

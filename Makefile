@@ -1,11 +1,11 @@
 CPP_FLAGS = -O2 -Wall -std=c++11
 DEBUG_FLAGS += -g -Wall -std=c++11
-PROG = audio_visualizer
+PROG = illusion
 SRC = pulseaudio_recorder.cpp small_fft.cpp visualizer.cpp beat_detector.cpp main.cpp
 SDL =-L/usr/local/lib -lSDL2 -lSDL2_image -lpulse-simple -lpulse -lpthread
 
 .PHONY: all
-all: small_fft
+all: illusion
 
 .PHONY: debug
 debug:
@@ -15,5 +15,5 @@ debug:
 clean:
 	rm $(PROG)
 
-small_fft: $(SRC)
+illusion: $(SRC)
 	g++ $(CPP_FLAGS) $(SRC) ${SDL} -o $(PROG)

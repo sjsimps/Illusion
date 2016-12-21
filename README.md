@@ -24,7 +24,11 @@ To open the GUI:
 > pavucontrol
 ```
 ![](https://github.com/sjsimps/Illusion/blob/master/pavucontrol.png)
+
 Select a recording source using the "record from" drop down menu.
+
+###Setting an Image
+Set what images Illusion uses by adding them into the Illusion/Images/ folder.
 
 ##Libraries Used:
 * PulseAudio: libpulse-dev

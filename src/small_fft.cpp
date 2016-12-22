@@ -5,7 +5,7 @@
 #include <cstring>
 #include <algorithm>
 
-#include "small_fft.h"
+#include "../include/small_fft.h"
 
 using namespace std;
 

@@ -12,10 +12,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "small_fft.h"
-#include "pulseaudio_recorder.h"
-#include "visualizer.h"
-#include "beat_detector.h"
+#include "../include/small_fft.h"
+#include "../include/pulseaudio_recorder.h"
+#include "../include/visualizer.h"
+#include "../include/beat_detector.h"
 
 const int WIDTH = 800;
 const int HEIGHT = 600;

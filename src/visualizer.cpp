@@ -4,7 +4,7 @@
 #include <SDL2/SDL_image.h>
 #include <string>
 
-#include "visualizer.h"
+#include "../include/visualizer.h"
 
 #define WIDTH 800
 #define HEIGHT 650

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <iostream>
 
-#include "beat_detector.h"
+#include "../include/beat_detector.h"
 
 BeatDetector::BeatDetector(float threshold, int buff_size, float prob_target)
 {

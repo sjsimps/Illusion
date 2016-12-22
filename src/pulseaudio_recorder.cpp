@@ -19,7 +19,7 @@
 #include <pulse/simple.h>
 #include <pulse/error.h>
 
-#include "pulseaudio_recorder.h"
+#include "../include/pulseaudio_recorder.h"
 
 #define NORMALIZE_STEP 10
 

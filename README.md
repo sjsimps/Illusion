@@ -6,6 +6,8 @@ Illusion monitors sound from any source to modify and display a
 set of images in real time.
 The frequency spectrum and amplitude of the recorded sound are analyzed
 in order to shift the colors of the image.
+Check out [this video](https://www.youtube.com/watch?v=PFm4s1jQ70A) to see
+how it works.
 
 ##Usage:
 

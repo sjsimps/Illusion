@@ -6,14 +6,14 @@
 
 #include "../include/beat_detector.h"
 
-BeatDetector::BeatDetector(float threshold, int buff_size, float prob_target)
+BeatDetector::BeatDetector(int buff_size, float prob_target)
 {
-    m_threshold = threshold;
     m_data = new float[buff_size];
     m_data_size = buff_size;
     m_lowpass = 1;
     m_n_detections = 0;
     m_n_calls = 0;
+    m_threshold = 100;
     m_prob_beat = 0;
     m_prob_beat_target = prob_target;
 }

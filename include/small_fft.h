@@ -40,6 +40,7 @@ public:
 
     std::vector<struct FreqContent> get_significant_frq(double threshold,
                                                         int lower_frq_bound,
-                                                        int window_size);
+                                                        int window_size,
+                                                        double* total_power);
 };
 

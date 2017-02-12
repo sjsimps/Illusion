@@ -1,7 +1,7 @@
 class BeatDetector
 {
 public:
-    BeatDetector(float threshold, int buff_size, float prob_target);
+    BeatDetector(int buff_size, float prob_target);
     ~BeatDetector();
     int contains_beat();
 

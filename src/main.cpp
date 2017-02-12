@@ -22,9 +22,9 @@ const int WIDTH = 800;
 const int HEIGHT = 600;
 const int N_FRQS = 3;
 const float IMG_CHANGE_TIME = 5.0;
-const float FRQ_THRESHOLD = 150.0;
+const float FRQ_THRESHOLD = 50.0;
 const float AMPL_THRESHOLD = 400.0;
-const float NORMALIZATION_COEF = 500.0;
+const float NORMALIZATION_COEF = 1000.0;
 
 static std::vector<std::string> image_files;
 static std::vector<struct FreqContent> content;
@@ -117,18 +117,19 @@ void transform_pixmap(uint32_t* pixels, float frq, float amp_f,
         }
         switch (frq_idx)
         {
-            case 1:
+            case 0:
                 newpix = ((newpix+(amp<<8)) & 0xff00) | (newpix & 0xffff00ff);
                 break;
+            case 1:
             case 2:
-            case 3:
                 newpix = ((newpix+(amp>>1)) & 0xff) | (newpix & 0xffffff00);
                 newpix = ((newpix+(amp<<7)) & 0xff00) | (newpix & 0xffff00ff);
                 break;
+            case 3:
             case 4:
-            case 5:
                 newpix = ((newpix+amp) & 0xff) | (newpix & 0xffffff00);
                 break;
+            case 5:
             case 6:
             case 7:
                 newpix = ((newpix+(amp<<7)) & 0xff00) | (newpix & 0xffff00ff);
@@ -229,7 +230,7 @@ int main(int argc, char*argv[])
     GetImages(&image_files);
     set_options(argc, argv);
 
-    const int REC_BUF_SIZE = 4096 >> 3;//<<1;
+    const int REC_BUF_SIZE = 4096 >> 3;
     const int FFT_BUF_SIZE = 32768 >> 2;
     const int SAMPLE_RATE = 44100; //Samples per sec
     PulseAudioRecorder recorder(REC_BUF_SIZE);
@@ -238,7 +239,7 @@ int main(int argc, char*argv[])
     pthread_t vis_thread;
     pthread_create(&vis_thread, NULL, run_visualizer, (void *)1);
 
-    BeatDetector beat_det(500.0, REC_BUF_SIZE, 0.05);
+    BeatDetector beat_det(REC_BUF_SIZE, 0.05);
 
     float* data = new float[FFT_BUF_SIZE*2];
 
@@ -279,7 +280,9 @@ int main(int argc, char*argv[])
             if (run_fft)
             {
                 static std::vector<struct FreqContent> content_tmp;
-                content_tmp = fft.get_significant_frq(AMPL_THRESHOLD, FRQ_THRESHOLD, 10);
+                double total_pwr = 0;
+                content_tmp = fft.get_significant_frq(AMPL_THRESHOLD, 1.0, 10, &total_pwr);
+                std::cout << "TOTAL PWR : " << total_pwr << "\n";
 
                 pthread_mutex_lock(&content_mutex);
                 content = content_tmp;
@@ -289,11 +292,11 @@ int main(int argc, char*argv[])
 
             t = clock() - t;
             std::cout << "EXEC_TIME : " << ((float)t)/CLOCKS_PER_SEC << "\n";
-            /*for (unsigned int x = 0; x < content.size(); x++)
+            for (unsigned int x = 0; x < content.size() && x < 5; x++)
             {
                 std::cout << "FRQ : " << content[x].frq <<
                           " // AMPL: " << content[x].pwr << "\n";
-            }*/
+            }
             fft.reset();
             std::cout << " ------------- \n";
 

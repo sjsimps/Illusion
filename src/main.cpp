@@ -217,6 +217,7 @@ int main(int argc, char*argv[])
 
     while (1)
     {
+        bool run_fft = true;
         // READING AUDIO BUFFER
         if (recorder.read_to_buf() >= 0)
         {
@@ -248,12 +249,16 @@ int main(int argc, char*argv[])
             clock_t t = clock();
             memcpy(fft.m_data, data, FFT_BUF_SIZE*2*sizeof(float));
 
-            static std::vector<struct FreqContent> content_tmp;
-            content_tmp = fft.get_significant_frq(AMPL_THRESHOLD, FRQ_THRESHOLD, 2);
+            if (run_fft)
+            {
+                static std::vector<struct FreqContent> content_tmp;
+                content_tmp = fft.get_significant_frq(AMPL_THRESHOLD, FRQ_THRESHOLD, 2);
 
-            pthread_mutex_lock(&content_mutex);
-            content = content_tmp;
-            pthread_mutex_unlock(&content_mutex);
+                pthread_mutex_lock(&content_mutex);
+                content = content_tmp;
+                pthread_mutex_unlock(&content_mutex);
+            }
+            run_fft = !run_fft;
 
             t = clock() - t;
             std::cout << "EXEC_TIME : " << ((float)t)/CLOCKS_PER_SEC << "\n";

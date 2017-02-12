@@ -11,6 +11,7 @@
 #include <vector>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <getopt.h>
 
 #include "../include/small_fft.h"
 #include "../include/pulseaudio_recorder.h"
@@ -23,8 +24,6 @@ const int N_FRQS = 3;
 const float IMG_CHANGE_TIME = 5.0;
 const float FRQ_THRESHOLD = 150.0;
 const float AMPL_THRESHOLD = 250.0;
-const bool USE_FULLSCREEN = false;
-//const bool USE_FULLSCREEN = true;
 
 static std::vector<std::string> image_files;
 static std::vector<struct FreqContent> content;
@@ -33,8 +32,40 @@ static int on_beat = 0;
 static pthread_mutex_t content_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t beat_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/* Returns a list of files in a directory (except the ones that begin with a dot) */
+static bool option_fullscreen = false;
 
+static void set_options(int argc, char* argv[])
+{
+    int option_index;
+    static struct option options[] =
+    {
+        {"help",       no_argument,       0, 'h'},
+        {"fullscreen", no_argument,       0, 'f'},
+        {0, 0, 0, 0}
+    };
+
+    while ((option_index = getopt_long(argc, argv, "hf", options, NULL)) != -1)
+    {
+        switch (option_index){
+            case 'f':
+                option_fullscreen = true;
+                break;
+            case 'h':
+                std::cout <<"\nUsage: ./illusion [options]"
+                     <<"\n\t[-f | --fullscreen] : Show output in fullscreen mode"
+                     <<"\n\t[-h | --help ]      : Display help\n\n";
+                exit(EXIT_SUCCESS);
+                break;
+            default:
+                std::cout<< "\nInvalid option. Program exiting.\n";
+                exit(EXIT_FAILURE);
+                break;
+        }
+    }
+}
+
+
+/* Returns a list of files in a directory (except the ones that begin with a dot) */
 void GetImages(std::vector<std::string>* out)
 {
     DIR *dir;
@@ -116,14 +147,12 @@ void transform_pixmap(uint32_t* pixels, float frq, float amp_f,
     }
 }
 
-
-static bool s_fullscreen = USE_FULLSCREEN;
 void* run_visualizer(void* thread_id)
 {
 
     Visualizer visualizer;
     int image_num = std::rand() % image_files.size();
-    visualizer.initialize(WIDTH, HEIGHT, image_files[image_num], s_fullscreen);
+    visualizer.initialize(WIDTH, HEIGHT, image_files[image_num], option_fullscreen);
 
     uint32_t* original_pixels = new uint32_t[WIDTH*HEIGHT];
     uint32_t* pixels = new uint32_t[WIDTH*HEIGHT];
@@ -197,6 +226,7 @@ int main(int argc, char*argv[])
     signal(SIGINT, sigint_handle);
     srand (time(NULL));
     GetImages(&image_files);
+    set_options(argc, argv);
 
     const int REC_BUF_SIZE = 4096 >> 3;//<<1;
     const int FFT_BUF_SIZE = 32768 >> 2;
@@ -205,10 +235,6 @@ int main(int argc, char*argv[])
     SmallFFT fft(FFT_BUF_SIZE, 1.0/SAMPLE_RATE);
 
     pthread_t vis_thread;
-    if (argc > 1 && strcmp(argv[1],"-f")==0 )
-    {
-        s_fullscreen = true;
-    }
     pthread_create(&vis_thread, NULL, run_visualizer, (void *)1);
 
     BeatDetector beat_det(500.0, REC_BUF_SIZE, 0.05);

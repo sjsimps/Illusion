@@ -23,7 +23,8 @@ const int HEIGHT = 600;
 const int N_FRQS = 3;
 const float IMG_CHANGE_TIME = 5.0;
 const float FRQ_THRESHOLD = 150.0;
-const float AMPL_THRESHOLD = 250.0;
+const float AMPL_THRESHOLD = 400.0;
+const float NORMALIZATION_COEF = 500.0;
 
 static std::vector<std::string> image_files;
 static std::vector<struct FreqContent> content;
@@ -248,7 +249,7 @@ int main(int argc, char*argv[])
         if (recorder.read_to_buf() >= 0)
         {
             // GET NORMALIZATION
-            float normalization_factor = 1.0 / (recorder.normalize_buffer() * 2000.0 + 1.0);
+            float normalization_factor = 1.0 / (recorder.normalize_buffer() * NORMALIZATION_COEF + 1.0);
             std::cout << "NORMALIZE: " << normalization_factor << "\n";
 
             // FORMATTING DATA AND APPENDING CHUNK TO FFT BUFFER
@@ -278,7 +279,7 @@ int main(int argc, char*argv[])
             if (run_fft)
             {
                 static std::vector<struct FreqContent> content_tmp;
-                content_tmp = fft.get_significant_frq(AMPL_THRESHOLD, FRQ_THRESHOLD, 2);
+                content_tmp = fft.get_significant_frq(AMPL_THRESHOLD, FRQ_THRESHOLD, 10);
 
                 pthread_mutex_lock(&content_mutex);
                 content = content_tmp;

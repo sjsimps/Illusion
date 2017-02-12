@@ -5,6 +5,17 @@ struct FreqContent
 {
     int frq;
     double pwr;
+    FreqContent(const double& pwr = 0) : pwr(pwr)
+    {
+    }
+    bool operator==(const FreqContent& a) const
+    {
+        return (pwr == a.pwr);
+    }
+    bool operator<(const FreqContent& a) const
+    {
+        return (pwr < a.pwr);
+    }
 };
 
 class SmallFFT
@@ -29,6 +40,6 @@ public:
 
     std::vector<struct FreqContent> get_significant_frq(double threshold,
                                                         int lower_frq_bound,
-                                                        int lpf_size);
+                                                        int window_size);
 };
 

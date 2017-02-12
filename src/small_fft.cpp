@@ -83,46 +83,38 @@ bool compareByAmpl(const struct FreqContent a, const struct FreqContent b)
 
 std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold,
                                                               int lower_frq_bound,
-                                                              int lpf_size)
+                                                              int window_size)
 {
     std::vector<struct FreqContent> retval;
     comp_FFT();
     const double frq_const = 1.0 / (m_sample_width * m_sample_period);
 
-    //LPF on the data:
-    float last_data = m_data[lower_frq_bound];
-    for (int x = lower_frq_bound; x < m_sample_width/2; x+=2)
+    double pwr_sum = 0;
+    int frq = 0;
+    for (int x = lower_frq_bound; x < (m_sample_width/2 - window_size); x+=2)
     {
-        m_data[x] = (m_data[x] + last_data*(lpf_size-1)) / lpf_size;
-        last_data = m_data[x];
-    }
-
-    //Find local maxima and append to list if above threshold
-    bool falling = false;
-    double ampl = 0;
-    double frq = 0;
-    for (int x = lower_frq_bound; x < m_sample_width/2; x+=2)
-    {
-        if (ampl)
+        frq = (double)(x>>1)*frq_const;
+        if (x == lower_frq_bound)
         {
-            if (!falling && std::abs(m_data[x]) < ampl)
+            for (int y = x; y < x + window_size*2; y+=2)
             {
-                if (ampl > threshold)
-                {
-                    struct FreqContent content;
-                    content.frq = frq;
-                    content.pwr = ampl;
-                    retval.push_back(content);
-                    falling = true;
-                }
-            }
-            else if (falling && std::abs(m_data[x]) > ampl)
-            {
-                falling = false;
+                pwr_sum += std::abs(m_data[y]);
             }
         }
-        ampl = std::abs(m_data[x]);
-        frq = (double)(x>>1)*frq_const;
+        else
+        {
+           pwr_sum -=  std::abs(m_data[x-2]);
+           pwr_sum +=  std::abs(m_data[x]);
+        }
+
+        double pwr = pwr_sum / window_size;
+        if (pwr > threshold)
+        {
+            struct FreqContent content;
+            content.frq = frq;
+            content.pwr = pwr;
+            retval.push_back(content);
+        }
     }
     std::sort(retval.begin(), retval.end(), compareByAmpl);
     return retval;

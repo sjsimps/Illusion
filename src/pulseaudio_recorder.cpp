@@ -91,7 +91,7 @@ float PulseAudioRecorder::normalize_buffer()
     }
     else
     {
-        int lowpass = 1000;
+        int lowpass = 50;
         m_max_signal = (new_max + m_max_signal*(lowpass-1) ) / lowpass;
     }
     std::cout << (float)(m_max_signal) / float(INT16_MAX) << "\n";

@@ -116,12 +116,14 @@ void transform_pixmap(uint32_t* pixels, float frq, float amp_f,
     }
 }
 
+
+static bool s_fullscreen = USE_FULLSCREEN;
 void* run_visualizer(void* thread_id)
 {
 
     Visualizer visualizer;
     int image_num = std::rand() % image_files.size();
-    visualizer.initialize(WIDTH, HEIGHT, image_files[image_num], USE_FULLSCREEN);
+    visualizer.initialize(WIDTH, HEIGHT, image_files[image_num], s_fullscreen);
 
     uint32_t* original_pixels = new uint32_t[WIDTH*HEIGHT];
     uint32_t* pixels = new uint32_t[WIDTH*HEIGHT];
@@ -203,6 +205,10 @@ int main(int argc, char*argv[])
     SmallFFT fft(FFT_BUF_SIZE, 1.0/SAMPLE_RATE);
 
     pthread_t vis_thread;
+    if (argc > 1 && strcmp(argv[1],"-f")==0 )
+    {
+        s_fullscreen = true;
+    }
     pthread_create(&vis_thread, NULL, run_visualizer, (void *)1);
 
     BeatDetector beat_det(500.0, REC_BUF_SIZE, 0.05);

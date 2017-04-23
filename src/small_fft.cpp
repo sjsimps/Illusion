@@ -80,11 +80,14 @@ bool compareByAmpl(const struct FreqContent a, const struct FreqContent b)
 {
     return std::abs(a.pwr) > std::abs(b.pwr);
 }
+bool compareByFrq(const struct FreqContent a, const struct FreqContent b)
+{
+    return std::abs(a.frq) > std::abs(b.frq);
+}
 
 std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold,
                                                               int lower_frq_bound,
-                                                              int window_size,
-                                                              double* total_power)
+                                                              int window_size)
 {
     std::vector<struct FreqContent> retval;
     comp_FFT();
@@ -109,7 +112,6 @@ std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold,
         }
 
         double pwr = pwr_sum / window_size;
-        *total_power += pwr;
         if (pwr > threshold)
         {
             struct FreqContent content;
@@ -118,8 +120,12 @@ std::vector<struct FreqContent> SmallFFT::get_significant_frq(double threshold,
             retval.push_back(content);
         }
     }
-    *total_power /= 1000000.0;
     std::sort(retval.begin(), retval.end(), compareByAmpl);
+    if (retval.size() > 3)
+    {
+        retval.resize(3);
+    }
+    std::sort(retval.begin(), retval.end(), compareByFrq);
     return retval;
 }
 

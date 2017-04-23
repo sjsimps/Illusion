@@ -23,6 +23,25 @@ BeatDetector::~BeatDetector()
     delete m_data;
 }
 
+double BeatDetector::get_power()
+{
+    double mean = 0.0;
+    double power = 0.0;
+    for (int x = 0; x < m_data_size; x++)
+    {
+        mean += m_data[x];
+    }
+    mean /= m_data_size;
+
+    for (int x = 0; x < m_data_size; x++)
+    {
+        power += std::pow(m_data[x] - mean, 2);
+    }
+    power /= m_data_size;
+    power /= 1000000.0;
+    return power;
+}
+
 int BeatDetector::contains_beat()
 {
     float delta = 0;

@@ -4,6 +4,7 @@ public:
     BeatDetector(int buff_size, float prob_target);
     ~BeatDetector();
     int contains_beat();
+    double get_power();
 
     float* m_data;
     int m_data_size;

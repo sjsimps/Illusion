@@ -8,8 +8,7 @@
 
 #define WIDTH 800
 #define HEIGHT 650
-//#define IMG_PATH "out.bmp"
-#define IMG_PATH "test1.bmp"
+#define WINDOW_NAME "Illusion : Dynamic Audio Visualizer"
 
 Visualizer::Visualizer()
 {
@@ -45,6 +44,7 @@ void Visualizer::initialize(int width, int height, std::string image_path, bool 
     // create the window and renderer
     // note that the renderer is accelerated
     m_win = SDL_CreateWindow("Image Loading", 100, 100, width, height, 0);
+    SDL_SetWindowTitle(m_win, WINDOW_NAME);
     if (fullscreen)
     {
         SDL_SetWindowFullscreen(m_win, SDL_WINDOW_FULLSCREEN);//_DESKTOP);

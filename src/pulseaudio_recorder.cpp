@@ -85,6 +85,10 @@ float PulseAudioRecorder::normalize_buffer()
             new_max = std::abs(m_buf[x]);
         }
     }
+
+    int lowpass = 50;
+    m_max_signal = (new_max + m_max_signal*(lowpass-1) ) / lowpass;
+    /*
     if (new_max > m_max_signal)
     {
         m_max_signal = new_max;
@@ -94,6 +98,7 @@ float PulseAudioRecorder::normalize_buffer()
         int lowpass = 50;
         m_max_signal = (new_max + m_max_signal*(lowpass-1) ) / lowpass;
     }
+    */
     std::cout << (float)(m_max_signal) / float(INT16_MAX) << "\n";
     return (float)(m_max_signal) / float(INT16_MAX);
 }

@@ -7,6 +7,7 @@ DEBUG_FLAGS += -g -Wall -std=c++11
 SRC =  src/pulseaudio_recorder.cpp 
 SRC += src/small_fft.cpp
 SRC += src/visualizer.cpp
+SRC += src/image_manipulator.cpp
 SRC += src/beat_detector.cpp
 SRC += src/main.cpp
 

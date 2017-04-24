@@ -1,4 +1,6 @@
 
+#ifndef VISUALIZER_H
+
 #include <string>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -21,3 +23,6 @@ public:
     SDL_Rect m_texr;
     int m_height, m_width;
 };
+
+#endif //VISUALIZER_H
+#define VISUALIZER_H

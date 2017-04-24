@@ -18,6 +18,7 @@
 #include "../include/pulseaudio_recorder.h"
 #include "../include/visualizer.h"
 #include "../include/beat_detector.h"
+#include "../include/image_manipulator.h"
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
@@ -98,70 +99,24 @@ void GetImages(std::vector<std::string>* out)
     closedir(dir);
 }
 
-static int c1, c2, c3, c4, c5, c6;
-void transform_pixmap(uint32_t* pixels, float frq, float amp_f,
-                      int content_idx, int n_frqs, uint32_t* original_pixels)
+int get_adjusted_frq(float frq)
 {
-    int frq_idx = (int)(frq / FRQ_FACTOR);
+    return (int)(frq / FRQ_FACTOR);
+}
 
+int get_adjusted_amp(float amp_f)
+{
     pthread_mutex_lock(&beat_mutex);
     int amp = ((int)pow((1.0 + amp_f/AMPL_FACTOR) *
                         (1.0 + total_pwr) *
                         (1.0 + on_beat), 0.5) & 0xff);
     if (on_beat > 0)
     {
-        on_beat--;
         amp *= on_beat;
+        on_beat--;
     }
     pthread_mutex_unlock(&beat_mutex);
-    //amp *= pow(1.0 + , 0.50);
-
-    for (int x = content_idx; x < WIDTH * HEIGHT; x+=n_frqs)
-    {
-        int newpix = pixels[x];
-        if (original_pixels && std::rand() < (RAND_MAX>>2))
-        {
-            newpix = original_pixels[x];
-        }
-        switch (frq_idx)
-        {
-            case 0:
-            case 1:
-                newpix = ((newpix+(amp<<8)) & 0xff00) | (newpix & 0xffff00ff);
-                c1++;
-                break;
-            case 2:
-            case 3:
-                newpix = ((newpix+(amp>>1)) & 0xff) | (newpix & 0xffffff00);
-                newpix = ((newpix+(amp<<7)) & 0xff00) | (newpix & 0xffff00ff);
-                c2++;
-                break;
-            case 4:
-            case 5:
-                newpix = ((newpix+amp) & 0xff) | (newpix & 0xffffff00);
-                c3++;
-                break;
-            case 6:
-            case 7:
-                newpix = ((newpix+(amp<<7)) & 0xff00) | (newpix & 0xffff00ff);
-                newpix = ((newpix+(amp<<15)) & 0xff0000) | (newpix & 0xff00ffff);
-                c4++;
-                break;
-            case 8:
-            case 9:
-            case 10:
-                newpix = ((newpix+(amp<<16)) & 0xff0000) | (newpix & 0xff00ffff);
-                c5++;
-                break;
-            default:
-                newpix = ((newpix+(amp<<15)) & 0xff0000) | (newpix & 0xff00ffff);
-                newpix = ((newpix+(amp>>1)) & 0xff) | (newpix & 0xffffff00);
-                c6++;
-                break;
-        }
-        pixels[x] = newpix;
-    }
-
+    return amp;
 }
 
 void* run_visualizer(void* thread_id)
@@ -171,15 +126,17 @@ void* run_visualizer(void* thread_id)
     int image_num = std::rand() % image_files.size();
     visualizer.initialize(WIDTH, HEIGHT, image_files[image_num], option_fullscreen);
 
-    uint32_t* original_pixels = new uint32_t[WIDTH*HEIGHT];
     uint32_t* pixels = new uint32_t[WIDTH*HEIGHT];
-    visualizer.get_pixels(pixels, WIDTH, HEIGHT);
-    visualizer.get_image_pixels(WIDTH, HEIGHT,image_files[image_num], original_pixels);
+    visualizer.get_image_pixels(WIDTH, HEIGHT,image_files[image_num], pixels);
     visualizer.render();
 
     std::cout << "VISUALIZER\n";
 
+    ImageManipulator manipulator(&visualizer, pixels,
+                                 WIDTH, HEIGHT);
+
     bool changing_image = false;
+    bool fading_overlay = false;
     clock_t last_image_change = clock();
 
     float frqs[N_FRQS];
@@ -187,6 +144,7 @@ void* run_visualizer(void* thread_id)
 
     while(1)
     {
+        // Get the current frequency content
         pthread_mutex_lock(&content_mutex);
         int content_size = content.size();
         for (int z = 0; (z < N_FRQS  && z < content_size); z++)
@@ -196,34 +154,42 @@ void* run_visualizer(void* thread_id)
         }
         pthread_mutex_unlock(&content_mutex);
 
+        // If the music is loud enough : Transform the image
         if (content_size > 0 && total_pwr > 0.001)
         {
             if (changing_image)
             {
-                memcpy(pixels,original_pixels,sizeof(uint32_t)*WIDTH*HEIGHT);
+                manipulator.set_image(pixels, WIDTH, HEIGHT);
                 changing_image = false;
+            }
+            if (fading_overlay)
+            {
+                manipulator.clear_overlay();
+                fading_overlay = false;
             }
 
             for (int content_idx = 0; (content_idx < N_FRQS  && content_idx < content_size); content_idx++)
             {
-                transform_pixmap(pixels, frqs[content_idx], amps[content_idx],
-                                 content_idx, N_FRQS, NULL);
+                float frq = get_adjusted_frq(frqs[content_idx]);
+                float amp = get_adjusted_amp(amps[content_idx]);
+                manipulator.transform_overlay(frq, amp, content_idx, N_FRQS);
             }
-            visualizer.set_pixels(pixels, WIDTH, HEIGHT);
-            visualizer.render();
+            manipulator.update_image();
         }
+        // Else the music is too quiet : Fade the overlay
         else
         {
-            if ((float)(clock()-last_image_change)/CLOCKS_PER_SEC >= IMG_CHANGE_TIME)
-            {
-                image_num = std::rand() % image_files.size();
-                last_image_change = clock();
-                visualizer.get_image_pixels(WIDTH, HEIGHT,image_files[image_num], original_pixels);
-            }
-            transform_pixmap(pixels, 0, 0,
-                             0, 1, original_pixels);
-            visualizer.set_pixels(pixels, WIDTH, HEIGHT);
-            visualizer.render();
+            manipulator.fade_overlay();
+            manipulator.update_image();
+            fading_overlay = true;
+        }
+
+        // Change the image on a timer
+        if ((float)(clock()-last_image_change)/CLOCKS_PER_SEC >= IMG_CHANGE_TIME)
+        {
+            image_num = std::rand() % image_files.size();
+            last_image_change = clock();
+            visualizer.get_image_pixels(WIDTH, HEIGHT,image_files[image_num], pixels);
             changing_image = true;
         }
         usleep(50000);
@@ -306,13 +272,6 @@ int main(int argc, char*argv[])
 
             processing_time = clock() - processing_time;
             read_time = clock() - read_time;
-
-            std::cout << "C1 : " << c1 << "\n";
-            std::cout << "C2 : " << c2 << "\n";
-            std::cout << "C3 : " << c3 << "\n";
-            std::cout << "C4 : " << c4 << "\n";
-            std::cout << "C5 : " << c5 << "\n";
-            std::cout << "C6 : " << c6 << "\n";
 
             std::cout << "HAS BEAT  : " << on_beat << " " << beat_det.m_threshold << "\n";
             std::cout << "NORMALIZE : " << normalization_factor << "\n";

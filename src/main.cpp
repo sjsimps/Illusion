@@ -144,6 +144,7 @@ void* run_visualizer(void* thread_id)
 
     while(1)
     {
+        clock_t edit_image_start = clock();
         // Get the current frequency content
         pthread_mutex_lock(&content_mutex);
         int content_size = content.size();
@@ -192,7 +193,12 @@ void* run_visualizer(void* thread_id)
             visualizer.get_image_pixels(WIDTH, HEIGHT,image_files[image_num], pixels);
             changing_image = true;
         }
-        usleep(50000);
+
+        // Ensure that we are only updating the image once every 0.26 seconds [~40FPS]
+        while ((float)(clock() - edit_image_start)/CLOCKS_PER_SEC < 0.026)
+        {
+            usleep(1000);
+        }
     }
     delete pixels;
     return NULL;
@@ -210,8 +216,8 @@ int main(int argc, char*argv[])
     GetImages(&image_files);
     set_options(argc, argv);
 
-    const int REC_BUF_SIZE = 4096 >> 2;
-    const int FFT_BUF_SIZE = 32768 >> 2;
+    const int REC_BUF_SIZE = 1024;
+    const int FFT_BUF_SIZE = 8192;
     const int SAMPLE_RATE = 44100; //Samples per sec
     PulseAudioRecorder recorder(REC_BUF_SIZE);
     SmallFFT fft(FFT_BUF_SIZE, 1.0/SAMPLE_RATE);
